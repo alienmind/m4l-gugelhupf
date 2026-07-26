@@ -8,7 +8,7 @@ title: "m4l-gugelhupf"
 
 Bring generative sequencing, euclidean rhythms, and algorithmic composition directly into your Ableton Session.
 
-[Download Latest Release](https://github.com/alienmind/m4l-gugelhupf/releases/latest) | [Get it on Gumroad](https://alienmindzzz.gumroad.com/l/m4l-gugelhupf) (might be outdated)
+[Download Latest Release](https://github.com/alienmind/m4l-gugelhupf/releases/latest) | [Get it on Gumroad](https://alienmindzzz.gumroad.com/l/m4l-gugelhupf-devices)
 
 ---
 
