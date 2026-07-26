@@ -4,6 +4,8 @@ title: "m4l-gugelhupf"
 
 # m4l-gugelhupf
 
+![m4l-gugelhupf logo](logo.png)
+
 **Max for Live devices** that bring [Strudel](https://strudel.cc) - the JavaScript port of TidalCycles' pattern language - natively into Ableton Live. 
 
 Bring generative sequencing, euclidean rhythms, and algorithmic composition directly into your Ableton Session.
