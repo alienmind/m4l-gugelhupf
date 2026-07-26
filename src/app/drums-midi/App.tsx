@@ -111,7 +111,7 @@ export default function App() {
 					onClick={() => setShowAbout(true)}
 					className="shrink-0 text-xs font-semibold tracking-tight hover:text-primary transition-colors cursor-pointer"
 				>
-					Strudel Drums MIDI
+					Gugelhupf Drums MIDI
 				</button>
 				<RunButton className="ml-auto" live={s.live} onRun={s.run} onStop={s.hush} />
 				<ClipButton onOpen={() => setShowClip(true)} />

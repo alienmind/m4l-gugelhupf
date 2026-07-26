@@ -3,7 +3,7 @@
  *
  * WHY THIS EXISTS. Neither `build-ui.mjs` nor `m4l-jweb build` deletes what it does not
  * overwrite, so `dist/` accumulated: a renamed device left its old `.amxd` behind
- * (`alienmind-strudel-superdough.amxd` outlived the rename to `alienmind-strudel`), a
+ * (`alienmind-gugelhupf-superdough.amxd` outlived the rename to `alienmind-gugelhupf`), a
  * withdrawn preset stayed a file, and a device run from `dist/` had written its WAV
  * bounces in there too. `m4l-jweb install` then mirrors that folder into the User
  * Library, so every one of those ghosts got installed - which is exactly how a stale

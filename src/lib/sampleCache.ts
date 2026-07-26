@@ -23,7 +23,7 @@
  */
 
 /** IndexedDB names. Bumping the version drops nothing - the store is keyed by URL. */
-const DB_NAME = "m4l-strudel-cache";
+const DB_NAME = "m4l-gugelhupf-cache";
 const DB_VERSION = 1;
 const STORE = "responses";
 

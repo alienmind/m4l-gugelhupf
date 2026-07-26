@@ -1,4 +1,4 @@
-# m4l-strudel - Architecture
+# m4l-gugelhupf - Architecture
 
 One repo → six self-contained Max for Live devices, each with its own React UI bundle, built on the [M4L-JWEB](https://github.com/alienmind/m4l-jweb) library.
 
@@ -34,17 +34,17 @@ This document describes the high-level architecture, the build pipeline, the run
                                ▼
                     seven self-contained .amxd
                                │
-   ├── alienmind-strudel.amxd                (instrument)
-   ├── alienmind-strudel-synth.amxd          (instrument)
-   ├── alienmind-strudel-drums-sampler.amxd  (instrument)
-   ├── alienmind-strudel-sample-browser.amxd (instrument)
-   ├── alienmind-strudel-midi.amxd           (MIDI)
-   ├── alienmind-strudel-drums-midi.amxd     (MIDI)
-   └── alienmind-strudel-fx.amxd             (audio)
+   ├── alienmind-gugelhupf.amxd                (instrument)
+   ├── alienmind-gugelhupf-synth.amxd          (instrument)
+   ├── alienmind-gugelhupf-drums-sampler.amxd  (instrument)
+   ├── alienmind-gugelhupf-sample-browser.amxd (instrument)
+   ├── alienmind-gugelhupf-midi.amxd           (MIDI)
+   ├── alienmind-gugelhupf-drums-midi.amxd     (MIDI)
+   └── alienmind-gugelhupf-fx.amxd             (audio)
 ```
 
-`alienmind-strudel` is the main device and carries the plain name; it was
-`alienmind-strudel-superdough` until 1.0.0 (the engine is still superdough, but the
+`alienmind-gugelhupf` is the main device and carries the plain name; it was
+`alienmind-gugelhupf-superdough` until 1.0.0 (the engine is still superdough, but the
 device is the whole language). Every other device keeps its suffix.
 
 An **instrument** originates sound and fills a track's instrument slot (strudel, the
@@ -299,7 +299,7 @@ Auditioning is still acquiring - there is no separate Download button, because p
 
 ### 4d. Strudel Drums Sampler: a code-driven, bank-based sampler
 
-`alienmind-strudel-drums-sampler` (`src/app/drums-sampler/`) is an INSTRUMENT device (`type: "instrument"`) on the `webaudio` + `midiin` chains: samples are fetched, decoded and played *in the page*, and it keeps its MIDI input ports (an instrument does). It is NOT a pad rack: sounds are keyed by NAME, and the device is driven by CODE first.
+`alienmind-gugelhupf-drums-sampler` (`src/app/drums-sampler/`) is an INSTRUMENT device (`type: "instrument"`) on the `webaudio` + `midiin` chains: samples are fetched, decoded and played *in the page*, and it keeps its MIDI input ports (an instrument does). It is NOT a pad rack: sounds are keyed by NAME, and the device is driven by CODE first.
 
 - **`s()` -> sound, via a bank.** The CODE screen runs a Strudel `s("bd sd, hh*8")` pattern through the shared engine (`voiceSink`, §3a) - bare mini-notation (`bd sd, hh!6`) is wrapped in `s(...)` by `asSampleCode`, not resolved to pitches. Each hap's sample name resolves against the selected BANK - a tidal-drum-machine, strudel's `bank()` prefix: `bd` with bank `RolandTR909` is the catalog key `RolandTR909_bd`. A `.bank("AkaiLinn")` in the pattern overrides the dropdown per-hap. The catalog is strudel's own generated `tidal-drum-machines.json` (`DRUM_MACHINES_URL` in `lib/samples.ts`, base rewritten ritchse->geikha for the moved repo).
 - **MIDI notes drive it too.** A note into the track maps to a drum sound by the Drum Rack / General MIDI convention (`NOTE_SOUND`: 36 = bd, 38 = sd, 42 = hh, ...) and plays the selected bank's sample for it - so a MIDI sequencer (or the Drums MIDI device) in front of the Sampler plays the same bank.
@@ -316,7 +316,7 @@ Every device draws from one set of parts, so the six faces read as one product r
 
 ### 4f. The Strudel device: all of Strudel, live
 
-`alienmind-strudel` is the REAL superdough - every synth, sample, orbit and
+`alienmind-gugelhupf` is the REAL superdough - every synth, sample, orbit and
 effect strudel.cc plays, because it *is* superdough, not a port - running live in the page
 and heard through the track. An instrument on the `webaudio` chain alone.
 
@@ -462,7 +462,7 @@ signal, queried per cycle, and the idiom is pattern arithmetic:
 
 ### 4g. Synth device: one superdough voice, played by MIDI
 
-`alienmind-strudel-synth` is the smallest instrument here: no pattern, no transport, no
+`alienmind-gugelhupf-synth` is the smallest instrument here: no pattern, no transport, no
 engine worker, no scheduler. `src/app/synth/useSynth.ts` is the whole device.
 
 - **The spec is a VALUE, not a pattern.** `s("sawtooth").lpf(800)` is compiled through the

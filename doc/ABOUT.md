@@ -1,20 +1,20 @@
 ---
-title: "m4l-strudel"
+title: "m4l-gugelhupf"
 ---
 
-# m4l-strudel
+# m4l-gugelhupf
 
 **Max for Live devices** that bring [Strudel](https://strudel.cc) - the JavaScript port of TidalCycles' pattern language - natively into Ableton Live. 
 
 Bring generative sequencing, euclidean rhythms, and algorithmic composition directly into your Ableton Session.
 
-[Download Latest Release](https://github.com/alienmind/m4l-strudel/releases/latest) | [Get it on Gumroad](https://alienmindzzz.gumroad.com/l/m4l-strudel) (might be outdated)
+[Download Latest Release](https://github.com/alienmind/m4l-gugelhupf/releases/latest) | [Get it on Gumroad](https://alienmindzzz.gumroad.com/l/m4l-gugelhupf) (might be outdated)
 
 ---
 
 ## New in 1.2.0
 
-- **The Studio is the instrument.** The Strudel device's sound is no longer made in the device view: it is made by a full local strudel.cc app running in a floating window. Its editor, its scheduler, its superdough, its visualisers. Evaluating a pattern there is what the track plays, and closing the window does not stop it.
+- **The Studio is the instrument.** The Gugelhupf device's sound is no longer made in the device view: it is made by a full local strudel.cc app running in a floating window. Its editor, its scheduler, its superdough, its visualisers. Evaluating a pattern there is what the track plays, and closing the window does not stop it.
 - **A pattern can describe a dial.** `note("c3 e3").s("sawtooth").lpf(m4lKnob(1, { name: 'cutoff', unit: 'Hz', range: [200, 2200] }))` binds directly to native dials, scaling values correctly.
 - **Three faces on the device view.** The device view now has a visualizer (fed by the window's level), a bank of vertical faders carrying whatever the pattern named, and a code scratchpad on its own state slot.
 - **Native panel.** Play alone on the top row, then two rows of four dials.
@@ -27,12 +27,12 @@ Bring generative sequencing, euclidean rhythms, and algorithmic composition dire
 
 ### The Main Instrument: Strudel
 
-![The Strudel device alongside the Studio window](screenshot-strudel-and-studio.png)
+![The Gugelhupf device alongside the Studio window](screenshot-strudel-and-studio.png)
 
-The primary deliverable is **Strudel** (`alienmind-strudel`, called `alienmind-strudel-superdough` before 1.0.0). This instrument understands the full Strudel language and uses the real `@strudel/superdough` engine to natively produce sounds (synths, oscillators, samples) and effects, perfectly in sync with Ableton's transport clock.
+The primary deliverable is **Gugelhupf** (`alienmind-gugelhupf`, called `alienmind-gugelhupf-superdough` before 1.0.0). This instrument understands the full Strudel language and uses the real `@strudel/superdough` engine to natively produce sounds (synths, oscillators, samples) and effects, perfectly in sync with Ableton's transport clock.
 
 > ⚠️ **Experimental Limitations:** superdough now runs LIVE in the device, so edits and knob turns are audible immediately and there is no loop boundary to wait for. What remains:
-> - **No MIDI in:** it sequences its own pattern rather than playing notes you send it. For that, use **Strudel Synth**.
+> - **No MIDI in:** it sequences its own pattern rather than playing notes you send it. For that, use **Gugelhupf Synth**.
 > - **Freeze does not work:** Live freezes a track offline, and this device's sound comes from a live browser engine. Use **Export**, or resample the track.
 > - **Timing can wobble:** the page's audio clock and Live's transport are two clocks, and a heavy set can pull them apart.
 
@@ -42,14 +42,14 @@ We also deliver a set of specialized, lightweight devices - some translating Str
 
 | Device | Type, drop it on | What it does for you |
 |---|---|---|
-| **Strudel Synth** | Instrument, **MIDI track** | Type a SOUND (`s("sawtooth").lpf(800)`) instead of a pattern, and every MIDI note the track sends plays it. |
-| **Strudel MIDI** | MIDI effect, **MIDI track** | Type a Strudel pattern, press **Run**, and it streams live MIDI into whatever instrument sits after it. Also converts patterns **to and from MIDI clips**. |
-| **Strudel Drums MIDI** | MIDI effect, **MIDI track** | The same generative power as Strudel MIDI, focused on drums. Visual **Kit** mapper routes drum words (`bd`, `sd`) directly to Drum Rack pads. |
-| **Strudel Drums Sampler** | Instrument, **MIDI track** | A code-driven drum sampler. Write `s("bd sd, hh*8")`, pick a drum machine **bank**, and it plays that machine's sounds. |
-| **Strudel Audio FX** | Audio effect, **audio track** | Type a single line of Strudel's DSP effect vocabulary (e.g., `.lpf(800).gain(1.2)`) and it generates a real Max signal chain on the track. |
-| **Strudel Samples** | Instrument, **MIDI track** | Browse Strudel's sample-map universe. Audition samples beat-synced to your project and drag them straight into a Drum Rack. |
+| **Gugelhupf Synth** | Instrument, **MIDI track** | Type a SOUND (`s("sawtooth").lpf(800)`) instead of a pattern, and every MIDI note the track sends plays it. |
+| **Gugelhupf MIDI** | MIDI effect, **MIDI track** | Type a Strudel pattern, press **Run**, and it streams live MIDI into whatever instrument sits after it. Also converts patterns **to and from MIDI clips**. |
+| **Gugelhupf Drums MIDI** | MIDI effect, **MIDI track** | The same generative power as Gugelhupf MIDI, focused on drums. Visual **Kit** mapper routes drum words (`bd`, `sd`) directly to Drum Rack pads. |
+| **Gugelhupf Drums Sampler** | Instrument, **MIDI track** | A code-driven drum sampler. Write `s("bd sd, hh*8")`, pick a drum machine **bank**, and it plays that machine's sounds. |
+| **Gugelhupf Audio FX** | Audio effect, **audio track** | Type a single line of Strudel's DSP effect vocabulary (e.g., `.lpf(800).gain(1.2)`) and it generates a real Max signal chain on the track. |
+| **Gugelhupf Samples** | Instrument, **MIDI track** | Browse Strudel's sample-map universe. Audition samples beat-synced to your project and drag them straight into a Drum Rack. |
 
-They are meant to be combined. The chain below is the whole idea in one track: **Strudel MIDI** sequences the notes (`<c3 c3 <c3 c#3>>*16`), **Strudel Synth** turns each one into sound (`s("sawtooth")`), and **Strudel Audio FX** filters the result (`.lpf(6613)`). Every line is Strudel; every knob is a real, automatable Live parameter.
+They are meant to be combined. The chain below is the whole idea in one track: **Gugelhupf MIDI** sequences the notes (`<c3 c3 <c3 c#3>>*16`), **Gugelhupf Synth** turns each one into sound (`s("sawtooth")`), and **Gugelhupf Audio FX** filters the result (`.lpf(6613)`). Every line is Strudel; every knob is a real, automatable Live parameter.
 
 
 
@@ -66,7 +66,7 @@ They are meant to be combined. The chain below is the whole idea in one track: *
 
 ## Device Guide
 
-### Strudel (`alienmind-strudel.amxd`)
+### Strudel (`alienmind-gugelhupf.amxd`)
 Type any Strudel pattern - whether it's synthesizers like `s("sawtooth")`, samples like `s("bd")`, or complex effect chains. Press **Run** and start Live's transport. The pattern plays live, as real track audio: it goes through the fader, the sends and the meters like any other instrument, and you can resample or record it.
 
 **One limitation worth knowing: Freeze does not work on this device.** Live's Freeze renders a track offline and faster than real time, and the device's sound comes from a live browser engine that cannot run in that offline pass - so a frozen track goes silent. This is a property of how Live freezes, not something the device can work around. Two things do work, and either gives you the same result:
@@ -80,21 +80,21 @@ Type any Strudel pattern - whether it's synthesizers like `s("sawtooth")`, sampl
 
 ![Strudel driving a drum rack and effects](screenshot-strudel-drum-rack-and-effects.gif)
 
-### Strudel Synth (`alienmind-strudel-synth.amxd`)
+### Gugelhupf Synth (`alienmind-gugelhupf-synth.amxd`)
 
-The synth is the one device here that takes a **sound**, not a pattern. Type `s("sawtooth")`, add an envelope and effects (`.attack(0.2).lpf(800).room(.3)`), press the tick (or **Ctrl+Enter**), and every MIDI note the track sends plays that sound - from a clip, from your keyboard, or from a Strudel MIDI device sitting in front of it.
+The synth is the one device here that takes a **sound**, not a pattern. Type `s("sawtooth")`, add an envelope and effects (`.attack(0.2).lpf(800).room(.3)`), press the tick (or **Ctrl+Enter**), and every MIDI note the track sends plays that sound - from a clip, from your keyboard, or from a Gugelhupf MIDI device sitting in front of it.
 
 There is no Play/Stop here on purpose: the notes are the trigger, so there is nothing to start.
 
 Two things to know:
-- **Structure collapses.** `s("<sawtooth square>")` is a pattern, and this device keeps only its first event. Patterns belong in the main Strudel device.
+- **Structure collapses.** `s("<sawtooth square>")` is a pattern, and this device keeps only its first event. Patterns belong in the main Gugelhupf device.
 - **Holding a key does not hold the note.** A note's length is decided when it starts, from `.sustain(seconds)` (0.6 s if you do not say). This is how the sound engine schedules a voice - the whole envelope goes in up front and cannot be cut short.
 
 Any `slider()` in the sound (`.lpf(slider(1200, 100, 8000))`) binds to one of the eight native knobs (**S1..S8**), so you can automate the timbre or turn it from Push.
 
 ![Strudel knobs showing slider parameters](screenshot-strudel-knobs.png)
 
-### Strudel MIDI (`alienmind-strudel-midi.amxd`)
+### Gugelhupf MIDI (`alienmind-gugelhupf-midi.amxd`)
 
 
 
@@ -110,7 +110,7 @@ The editor features a native **Play/Stop** panel for macro-mapping, and a compre
 
 ![The Strudel reference window](strudel-help.png)
 
-### Strudel Drums MIDI (`alienmind-strudel-drums-midi.amxd`)
+### Gugelhupf Drums MIDI (`alienmind-gugelhupf-drums-midi.amxd`)
 
 
 
@@ -118,9 +118,9 @@ Built for driving Drum Racks. Instead of writing absolute pitches, write Strudel
 
 Clicking the **Kit** button opens a dedicated visual mapper to route Strudel's vocabulary directly to your Ableton Drum Rack pads (e.g. assigning `bd` to note `36`). These mappings are stored natively and save with your Live set.
 
-![Strudel Drums MIDI Kit Mapping](screenshot-midi-drums-mapping.png)
+![Gugelhupf Drums MIDI Kit Mapping](screenshot-midi-drums-mapping.png)
 
-### Strudel Drums Sampler (`alienmind-strudel-drums-sampler.amxd`)
+### Gugelhupf Drums Sampler (`alienmind-gugelhupf-drums-sampler.amxd`)
 
 
 
@@ -132,9 +132,9 @@ A self-contained instrument that fetches and plays samples from **drum-machine b
 
 You can also browse the selected bank's sounds via the **Sounds** screen and audition them directly through the track.
 
-![Strudel Drums Sampler - the SOUNDS screen, a bank's sounds to audition](screenshot-drums-sampler-2.png)
+![Gugelhupf Drums Sampler - the SOUNDS screen, a bank's sounds to audition](screenshot-drums-sampler-2.png)
 
-### Strudel Audio FX (`alienmind-strudel-fx.amxd`)
+### Gugelhupf Audio FX (`alienmind-gugelhupf-fx.amxd`)
 
 
 
@@ -145,7 +145,7 @@ Brings Strudel's chainable DSP vocabulary to any audio track. Type a chain of St
 
 
 
-### Strudel Sample Browser (`alienmind-strudel-sample-browser.amxd`)
+### Strudel Sample Browser (`alienmind-gugelhupf-sample-browser.amxd`)
 
 A browser for the community sample maps behind strudel.cc. Drop it on any audio track.
 - Browse curated community sample maps (dough-samples, Dirt-Samples, clean-breaks).

@@ -4,19 +4,19 @@
  *
  * `type` is the container tag Live sees; `mode` is what the wrapper is told it
  * is; `ui` is the folder under src/app/ holding the device's UI (defaults to
- * `name`, which is why the two devices here set it - `alienmind-strudel-midi`
+ * `name`, which is why the two devices here set it - `alienmind-gugelhupf-midi`
  * would otherwise look for a folder of that exact name).
  */
 export default [
 	{
-		name: "alienmind-strudel-midi",
+		name: "alienmind-gugelhupf-midi",
 		ui: "midi",
 		type: "midi", // 'mmmm' MIDI effect
 		chains: ["midiout"], // packaged chain: the engine's note stream -> MIDI out
 		unmatchedTo: "js", // ui_ready / write_clip / read_notes reach the wrapper
 	},
 	{
-		name: "alienmind-strudel-drums-midi",
+		name: "alienmind-gugelhupf-drums-midi",
 		ui: "drums-midi",
 		type: "midi", // 'mmmm' MIDI effect
 		chains: ["midiout"],
@@ -35,7 +35,7 @@ export default [
 		 * processes nothing, so it fills a track's instrument slot rather than
 		 * posing as an effect on audio it never touches.
 		 */
-		name: "alienmind-strudel-sample-browser",
+		name: "alienmind-gugelhupf-sample-browser",
 		ui: "sample-browser",
 		type: "instrument",
 		mode: "sample-browser",
@@ -43,7 +43,7 @@ export default [
 		unmatchedTo: "js",
 	},
 	{
-		name: "alienmind-strudel-fx",
+		name: "alienmind-gugelhupf-fx",
 		ui: "fx",
 		type: "audio",
 		chains: ["lowpass", "hpf", "drive", "crush", "delay", "reverb", "gain", "remote"],
@@ -58,7 +58,7 @@ export default [
 		 * in front drives the same bank. The old [poly~]/[buffer~] slots are gone
 		 * (doc/DRAWER_OF_FAILED_IDEAS.md).
 		 */
-		name: "alienmind-strudel-drums-sampler",
+		name: "alienmind-gugelhupf-drums-sampler",
 		ui: "drums-sampler",
 		type: "instrument",
 		mode: "drums-sampler",
@@ -71,7 +71,7 @@ export default [
 	{
 		/**
 		 * Strudel - the MAIN device of this repo: ALL of Strudel, as the track's real
-		 * audio. It was `alienmind-strudel-superdough` until 1.0.0; the engine is still
+		 * audio. It was `alienmind-gugelhupf-superdough` until 1.0.0; the engine is still
 		 * superdough, but the DEVICE is the whole language, so it carries the plain name.
 		 * The page runs the real superdough engine LIVE (synths, samples, orbits, effects -
 		 * everything strudel.cc plays, because it IS superdough) and jweb~ routes
@@ -81,7 +81,7 @@ export default [
 		 * type "instrument": it fills the Rack's instrument slot - the sound source
 		 * of the track, not an effect on one.
 		 */
-		name: "alienmind-strudel",
+		name: "alienmind-gugelhupf",
 		ui: "strudel",
 		type: "instrument",
 		mode: "strudel",
@@ -102,7 +102,7 @@ export default [
 		 * `midiin` is the trigger and `webaudio` carries the result into the track. No
 		 * `download` chain - it writes no files.
 		 */
-		name: "alienmind-strudel-synth",
+		name: "alienmind-gugelhupf-synth",
 		ui: "synth",
 		type: "instrument",
 		mode: "synth",

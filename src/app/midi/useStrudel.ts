@@ -115,7 +115,7 @@ function hasBareNumber(text: string): boolean {
 	return miniNoteTokens(text).some((t) => /^-?\d+$/.test(t));
 }
 
-const LIVE_SCALE_KEY = "m4l-strudel.liveScale";
+const LIVE_SCALE_KEY = "m4l-gugelhupf.liveScale";
 
 function loadLiveScale(): boolean {
 	try {

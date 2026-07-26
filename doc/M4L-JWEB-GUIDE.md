@@ -1,4 +1,4 @@
-# Building m4l-strudel with M4L-JWEB
+# Building m4l-gugelhupf with M4L-JWEB
 
 This is a **[M4L-JWEB](https://github.com/alienmind/m4l-jweb)** device repo: one `src/app/<device>/` folder per device (`App.tsx`, `protocol.ts`, `surface.ts`), each building into its own `.amxd` with its own UI bundle - a device ships what it is, not what its sibling is. `patcher/devices.mjs` is the manifest; `wrapper/device.ts` holds the shared `[js]` extensions. A device's Live parameters are declared **once**, in its `surface.ts`, and the build generates the `live.*` objects, their wiring and their message selectors from that one declaration. Everything else - the `.amxd` container writer, the generated patchers, the `[js]` lifecycle, the ES5 gate, the per-device build plumbing (`scripts/dev.mjs`, `scripts/build-ui.mjs`) - comes from the published `@m4l-jweb/bridge`, `@m4l-jweb/surface` and `@m4l-jweb/build` packages.
 
@@ -6,8 +6,8 @@ If you were setting this repo up from scratch today, this is the path:
 
 1. **Scaffold the repo.**
    ```bash
-   pnpm dlx @m4l-jweb/build init m4l-strudel
-   cd m4l-strudel && pnpm install
+   pnpm dlx @m4l-jweb/build init m4l-gugelhupf
+   cd m4l-gugelhupf && pnpm install
    ```
    This gives you a working one-device `hello-midi` build: `src/app/midi/` (`App.tsx`, `protocol.ts`, `surface.ts`), `patcher/devices.mjs`, all the vite/tsconfig plumbing - the exact shape this repo still has today.
 

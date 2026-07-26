@@ -1,6 +1,6 @@
 # Changelog
 
-High-level history of m4l-strudel, grouped by milestone release. Up to 1.0.0 each
+High-level history of m4l-gugelhupf, grouped by milestone release. Up to 1.0.0 each
 minor version was a milestone of its own. Newest first.
 
 ## 1.1.0 - 2026-07-22
@@ -51,7 +51,7 @@ The findings are in [ARCHITECTURE.md](doc/ARCHITECTURE.md) 4k and the closed rou
 The v1.0.0 backlog, cleared: the transport drives the devices, samples survive going
 offline, there is a MIDI-played synth, and the main device gets its plain name.
 
-- **`alienmind-strudel-superdough` is now `alienmind-strudel`.** The engine is still
+- **`alienmind-gugelhupf-superdough` is now `alienmind-gugelhupf`.** The engine is still
   superdough; the DEVICE is the whole language, so it carries the plain name. Every
   parameter and state slot name is unchanged. An existing Live set embeds its own copy
   of the old device and keeps working - re-add the device to move a set onto the new
@@ -67,7 +67,7 @@ offline, there is a MIDI-played synth, and the main device gets its plain name.
 - **Offline sample cache.** Every sample and sample map fetched by any device is stored
   in the page (IndexedDB, with a session fallback) and served cache first, so a set
   reopened with no network still plays the sounds it played before.
-- **Strudel Synth** (`alienmind-strudel-synth`): one superdough sound - `s("sawtooth")
+- **Strudel Synth** (`alienmind-gugelhupf-synth`): one superdough sound - `s("sawtooth")
   .lpf(800).room(.3)`, a value rather than a pattern - played by the track's MIDI. The
   eight native slider knobs work here too. Note length is decided at trigger time
   (superdough schedules a whole envelope up front), so holding a key does not hold the
@@ -94,7 +94,7 @@ offline, there is a MIDI-played synth, and the main device gets its plain name.
 
 All of Strudel as the track's audio: the **Strudel Superdough** instrument.
 
-- **Strudel Superdough** (`alienmind-strudel-superdough`): write anything strudel.cc plays
+- **Strudel Superdough** (`alienmind-gugelhupf-superdough`): write anything strudel.cc plays
   - multi-line `$:`, samples, synths, orbits, superdough's real effects - and the device
   renders it **offline with the real superdough engine** into a WAV that Max loops on the
   track, locked to Live's transport, crossfading to each fresh render at the loop boundary.

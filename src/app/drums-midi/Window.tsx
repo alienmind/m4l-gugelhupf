@@ -29,7 +29,7 @@ export default function DrumRackWindow() {
 	return (
 		<main className="flex h-screen w-screen flex-col gap-3 overflow-hidden bg-background p-4 text-foreground">
 			<div className="flex items-baseline justify-between border-b border-input pb-2">
-				<h1 className="text-sm font-semibold tracking-tight">Strudel Drum Rack</h1>
+				<h1 className="text-sm font-semibold tracking-tight">Gugelhupf Drum Rack</h1>
 				<div className="flex items-baseline gap-3">
 					<span className="text-xs text-muted-foreground">C1 to C6 &middot; type a word or drag one onto a pad</span>
 					<button

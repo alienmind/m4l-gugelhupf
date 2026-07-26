@@ -39,7 +39,7 @@ interface RowState {
 }
 
 /**
- * Strudel Samples - browse Strudel's sample maps, hear them, drag them out.
+ * Gugelhupf Samples - browse Strudel's sample maps, hear them, drag them out.
  *
  * THE PREVIEW plays through the TRACK: under jweb~ the page's Web Audio output is
  * the device's signal path (the `webaudio` chain), so an AudioBufferSourceNode here

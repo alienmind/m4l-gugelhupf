@@ -113,9 +113,7 @@ export default function App() {
 				<button
 					onClick={() => setShowAbout(true)}
 					className="shrink-0 text-xs font-semibold tracking-tight hover:text-primary transition-colors cursor-pointer"
-				>
-					Strudel
-				</button>
+				>Gugelhupf</button>
 				<RunButton className="ml-auto" live={s.live} onRun={s.run} onStop={s.hush} />
 				{/* Allowed while playing: the bounce takes superdough's context over for its
 				    duration, so playback goes quiet and resumes (useStrudelRender). */}

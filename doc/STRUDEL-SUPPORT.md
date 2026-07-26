@@ -20,7 +20,7 @@ That is why this project takes two paths:
 
 ## 1. Strudel (The Main Instrument)
 
-The **Strudel** device (`alienmind-strudel`) uses Strudel's real audio engine to render audio directly into your Ableton track.
+The **Strudel** device (`alienmind-gugelhupf`) uses Strudel's real audio engine to render audio directly into your Ableton track.
 
 ### Supported: Almost Everything
 

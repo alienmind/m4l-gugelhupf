@@ -373,7 +373,7 @@ export default function App() {
 					onClick={() => setShowAbout(true)}
 					className="shrink-0 text-xs font-semibold tracking-tight hover:text-primary transition-colors cursor-pointer"
 				>
-					Strudel Drums Sampler
+					Gugelhupf Drums Sampler
 				</button>
 				{view === "code" ? (
 					<>

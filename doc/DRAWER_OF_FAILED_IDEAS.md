@@ -221,7 +221,7 @@ The first attempt at instance-scoped buffer names used `#0`, documented for abst
 
 Status: exploratory. Nothing here is implemented. This document records what Live
 actually offers, what it does not, and a preliminary design for the closest thing
-we can build, split between m4l-jweb (the library) and m4l-strudel (the devices).
+we can build, split between m4l-jweb (the library) and m4l-gugelhupf (the devices).
 
 ### 1. The question
 
@@ -357,7 +357,7 @@ LOM to find screen coordinates (measured dead end), and the fold-out width
 pattern (device-side technique, not a library feature, pending the Phase 0
 spike).
 
-#### 4b. m4l-strudel changes (this repo)
+#### 4b. m4l-gugelhupf changes (this repo)
 
 1. **One `expanded` window per device replaces the two windows the MIDI devices
    have today.** The Expanded entry composes what already exists: the pattern
@@ -388,7 +388,7 @@ spike).
   subpatcher when the user closes it; (c) the fold-out width spike from 3b,
   which can fail without hurting the rest.
 - **Phase 1 (m4l-jweb)**: items 1-3, new minor version.
-- **Phase 2 (m4l-strudel)**: consume it, starting with ONE device (midi) to
+- **Phase 2 (m4l-gugelhupf)**: consume it, starting with ONE device (midi) to
   shake out the state audit, then the rest.
 - **Phase 3 (optional)**: fold-out width for the fx device if the spike worked;
   the `expanded:` sugar if the arrow button placement bothers us.
@@ -442,7 +442,7 @@ rendering against its own timeline, and the live path has to clamp against it
 
 The removed implementation, for archaeology: m4l-jweb's `renderplay`, `samples` and
 `instrument` chains and their bridge APIs (renderLoad/renderArm/renderSync/
-onRenderReady, loadSample/playVoice), and m4l-strudel's src/lib/render/offline.ts,
+onRenderReady, loadSample/playVoice), and m4l-gugelhupf's src/lib/render/offline.ts,
 src/lib/render/conductor.ts and their tests. All in git history before the 0.9.9
 webaudio rewrite.
 

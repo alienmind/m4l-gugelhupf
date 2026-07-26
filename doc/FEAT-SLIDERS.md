@@ -8,7 +8,7 @@ so that:
 
 - strudel.cc can gather every slider of a pattern into one "Sliders" pane instead of
   making the user hunt for them inline;
-- m4l-strudel can map them onto Ableton's device knobs (`S1..Sn`) with the right label
+- m4l-gugelhupf can map them onto Ableton's device knobs (`S1..Sn`) with the right label
   and range, and stop asking its users to write a bespoke `m4lKnob()` primitive.
 
 The point is that a Strudel coder writes the Strudel they already know. Metadata is
@@ -103,7 +103,7 @@ required.
    the `name` as label and the `unit` beside the value, and on input post the same
    `cm-slider` message the inline widget posts.
 
-## 3. What m4l-strudel does with it
+## 3. What m4l-gugelhupf does with it
 
 **Correction to an earlier draft of this document:** the `update` CustomEvent on
 `<strudel-editor>` belongs to `packages/repl` - the embeddable web component. The Studio

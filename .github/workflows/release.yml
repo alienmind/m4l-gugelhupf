@@ -54,5 +54,5 @@ jobs:
         with:
           generate_release_notes: true
           files: |
-            dist/m4l-strudel/*.amxd
-            dist/m4l-strudel.zip
+            dist/m4l-gugelhupf/*.amxd
+            dist/m4l-gugelhupf.zip

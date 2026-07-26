@@ -11,7 +11,7 @@ from the code.
 Nothing here can be proven without Live, so a change lands as a build to be
 tested by hand. Make that request SCHEMATIC:
 
-1. Name the EXACT device - `alienmind-strudel`, not "the device".
+1. Name the EXACT device - `alienmind-gugelhupf`, not "the device".
 2. A table, and little else: check number, what to do, what should happen.
 3. One line on what is expected to still be broken at this stop.
 4. Ask for the result by check NUMBER, plus the Max console output.
@@ -22,7 +22,7 @@ re-dragged to pick up a build. That is known.
 
 Example of the whole thing:
 
-> Test **`alienmind-strudel`**.
+> Test **`alienmind-gugelhupf`**.
 >
 > | # | Do this | Should happen |
 > |---|---------|---------------|

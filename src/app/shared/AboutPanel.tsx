@@ -40,16 +40,16 @@ export function AboutPanel({
 			    to push it off the bottom, so it looked like the Studio button had vanished. */}
 			<div className="flex flex-col flex-1 items-center justify-start gap-3 overflow-y-auto text-center px-4">
 				<div>
-					<h1 className="text-base font-bold text-foreground">m4l-strudel</h1>
+					<h1 className="text-base font-bold text-foreground">m4l-gugelhupf</h1>
 					{/* NOT an <a>: a link followed inside the device's webview strands the
 					    user in a page with no back button and no way out but reloading the
 					    device. It opens in their own browser instead. */}
 					<Button
 						variant="link"
-						onClick={() => openExternal("https://github.com/alienmind/m4l-strudel")}
+						onClick={() => openExternal("https://github.com/alienmind/m4l-gugelhupf")}
 						className="mt-1 w-full text-xs"
 					>
-						github.com/alienmind/m4l-strudel
+						github.com/alienmind/m4l-gugelhupf
 					</Button>
 				</div>
 				

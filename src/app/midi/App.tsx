@@ -12,7 +12,7 @@ import { scaleLabel, useStrudel } from "./useStrudel";
 import surface from "./surface";
 
 /**
- * Strudel MIDI - a MIDI effect. Sits on a MIDI track, before an instrument,
+ * Gugelhupf MIDI - a MIDI effect. Sits on a MIDI track, before an instrument,
  * and streams live MIDI generated from a Strudel pattern.
  *
  * Live's device view is a FIXED ~169px tall - every row here is budgeted.

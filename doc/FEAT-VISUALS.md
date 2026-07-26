@@ -6,7 +6,7 @@ Currently, the `Visualizer.tsx` in the device view only renders a scrolling peak
 
 The visualizer currently relies on a `level_${windowId}` message sent from a `[peakamp~]` object in the Max patcher a few dozen times a second. This scalar value (amplitude peak) is insufficient for drawing rich visualizations like an Oscilloscope (requires time-domain waveform data), a Sonogram (requires frequency-domain spectrum data), or a Spectrogram (requires frequency over time).
 
-Furthermore, sound in `m4l-strudel` can be generated in two separate Chromium contexts:
+Furthermore, sound in `m4l-gugelhupf` can be generated in two separate Chromium contexts:
 1. **The Inline Engine (`useStrudelRender.ts`)**: Runs directly inside the device's `jweb~` component.
 2. **The Studio (REPL Window)**: Runs in its own separate `jweb~` window.
 

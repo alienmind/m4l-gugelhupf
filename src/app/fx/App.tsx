@@ -25,7 +25,7 @@ import { AboutPanel } from "../shared/AboutPanel";
 import { useModulation } from "./useModulation";
 
 /**
- * Strudel Audio FX - an audio effect. Sits anywhere in an audio chain and applies
+ * Gugelhupf Audio FX - an audio effect. Sits anywhere in an audio chain and applies
  * a Strudel effects line to whatever audio is already coming into the track.
  *
  * The whole interface is ONE LINE plus the sliders for whatever that line names.

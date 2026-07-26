@@ -12,7 +12,7 @@ import { useSynth } from "./useSynth";
 import surface from "./surface";
 
 /**
- * Strudel Synth - superdough as a plain MIDI instrument.
+ * Gugelhupf Synth - superdough as a plain MIDI instrument.
  *
  * Type a SOUND (`s("sawtooth").lpf(800).room(.3)` - a superdough value, not a pattern),
  * press Run, and every MIDI note the track sends plays it. No transport and no Play
