@@ -379,10 +379,43 @@ describe("m4l-shim", () => {
 		page.editor.widgets = [widget(from, from + 3, 500, 100, 1000)];
 		vi.advanceTimersByTime(1000);
 
-		page.inlets.set_s1(750);
+		// A DIAL VALUE IS A POSITION. The dials travel 0..1 (widening one costs it its
+		// automation lane), so the slider's own 100..1000 is applied here.
+		page.inlets.set_s1(0.5);
 		// `cm-slider` sets sliderValues[id], which the pattern's ref() reads on its
 		// next query - so the sound changes without re-evaluating.
-		expect(page.posted.pop()).toEqual({ type: "cm-slider", id: `${from}:${from + 3}`, value: 750 });
+		expect(page.posted.pop()).toEqual({ type: "cm-slider", id: `${from}:${from + 3}`, value: 550 });
+	});
+
+	it("a dial at the bottom of its travel reaches the slider's MIN, not zero", () => {
+		// The bug this pins: the position was passed through unscaled, so an lpf whose
+		// code says 100..1000 received 0.02 - i.e. 0.02 Hz. The sound cut out in one
+		// step and NO dial position brought it back, because the entire 0..1 travel
+		// was inaudible. Silent, binary, and not visible anywhere as an error.
+		mount();
+		editor.codeIs("s(\"saw\").lpf(slider(500, 100, 1000))");
+		const from = (editor.code as string).indexOf("500");
+		page.editor.widgets = [widget(from, from + 3, 500, 100, 1000)];
+		vi.advanceTimersByTime(1000);
+
+		page.inlets.set_s1(0);
+		expect(page.posted.pop()).toMatchObject({ value: 100 });
+		page.inlets.set_s1(1);
+		expect(page.posted.pop()).toMatchObject({ value: 1000 });
+	});
+
+	it("a dial Live DID widen is passed through, not scaled twice", () => {
+		// Nothing here asks for widening any more, but the wrapper still answers if
+		// something ever does, and the value would already be in real units.
+		mount();
+		editor.codeIs("s(\"saw\").lpf(slider(500, 100, 1000))");
+		const from = (editor.code as string).indexOf("500");
+		page.editor.widgets = [widget(from, from + 3, 500, 100, 1000)];
+		vi.advanceTimersByTime(1000);
+
+		page.inlets.param_range_ok("s1");
+		page.inlets.set_s1(750);
+		expect(page.posted.pop()).toMatchObject({ value: 750 });
 	});
 
 	it("does not re-describe the dials while the pattern's controls are unchanged", () => {
