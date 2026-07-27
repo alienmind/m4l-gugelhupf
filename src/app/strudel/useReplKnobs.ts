@@ -134,13 +134,25 @@ export function useReplKnobs(): { faders: SliderKnob[]; declared: boolean } {
 	// and the parameter setters below are rebuilt every render.
 	useEffect(() => {
 		if (!pending.current.length) return;
+		// A seed carries the slider's value in ITS OWN units, and turning that into a
+		// dial position needs the slider's range. The two arrive as separate messages,
+		// so a seed that overtakes its range must WAIT rather than be normalized
+		// against a 0..1 guess: 600 written to a 0..1 dial clamps to 1, and the fader
+		// then reads the top of the travel instead of where the code put it.
 		const queue = pending.current.splice(0);
+		const held: typeof queue = [];
 		for (const { index, value } of queue) {
 			const desc = descs[index];
-			const span = desc ? desc.max - desc.min : 1;
+			if (!desc) {
+				held.push({ index, value });
+				continue;
+			}
+			const span = desc.max - desc.min;
 			const [, setValue] = params[index];
-			setValue(desc?.real ? value : span ? (value - (desc?.min ?? 0)) / span : value);
+			setValue(desc.real ? value : span ? (value - desc.min) / span : value);
 		}
+		// Back on the queue, for the render that learns the range.
+		pending.current = held.concat(pending.current);
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [seedTickValue, descs]);
 

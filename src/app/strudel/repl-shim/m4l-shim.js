@@ -363,14 +363,28 @@
 		}
 	}
 
-	/** Move a slider from a dial, and nudge its widget so the page keeps up. */
+	/**
+	 * Move a slider from a dial, and nudge its widget so the page keeps up.
+	 *
+	 * THE DIAL'S VALUE IS A POSITION, NOT THE SLIDER'S VALUE. The widget wants the
+	 * slider's own domain - 200..2000 for an lpf - and the dial travels 0..1, because
+	 * widening it would cost it its automation lane and its macro. So the scaling is
+	 * here. Sending the position straight through puts an lpf at 0.22 Hz: silence, in
+	 * one step, and no dial position brings it back because the whole travel is
+	 * inaudible.
+	 *
+	 * `knobIsReal` is still consulted: nothing in this repo widens a dial any more, but
+	 * the wrapper will still answer `param_range_ok` if something ever does, and the
+	 * value would then already be scaled. Exactly one scaling, either way.
+	 */
 	function setSlider(index, value) {
 		var slot = sliderMap[index];
 		if (!slot) return;
-		window.postMessage({ type: "cm-slider", id: slot.id, value: value });
+		var v = knobIsReal[index] ? value : slot.min + value * (slot.max - slot.min);
+		window.postMessage({ type: "cm-slider", id: slot.id, value: v });
 		try {
 			var el = document.getElementById(slot.id);
-			if (el) el.value = value;
+			if (el) el.value = v;
 		} catch (e) {
 			/* cosmetic only - the sound has already changed */
 		}
