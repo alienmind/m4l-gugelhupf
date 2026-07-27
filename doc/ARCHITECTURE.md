@@ -365,8 +365,13 @@ and heard through the track. An instrument on the `webaudio` chain alone.
   threw LiveAPI noise.
 - **Slider knobs.** Eight native dials `s1..s8` (a static pool in the panel behind the
   transport switch): each `slider()` in the code binds to one, in source order, through
-  `shared/useSliderKnobs.ts`. Values travel NORMALIZED 0..1 - a dial's travel is stamped at
-  build time while a slider's range belongs to the code - and turning one feeds
+  `shared/useSliderKnobs.ts`. **The pool itself is the library's as of 1.2.1** - the
+  surfaces declare `...knobPool(KNOB_POOL)` and the hook is a thin wrapper over
+  `useControls()`, which owns the borrowing, the `describeParam` handshake, whether Live
+  took the range, and the seeding. What is left in this repo is the two Strudel-specific
+  halves: reading a control's NAME out of the source text (`sliderLabels`) and pushing
+  the values back into the pattern. Values travel NORMALIZED 0..1 - a dial's travel is
+  stamped at build time while a slider's range belongs to the code - and turning one feeds
   `setSliderOverrides` into the next compile, so the pattern is re-evaluated with the new
   value. `engine.mjs` holds the capture (`beginSliderCapture`/`getSliderSpecs`) for the
   worker; `lib/render/scope.ts` carries the same for the main-thread export renderer. What
@@ -538,13 +543,19 @@ catch it with (`readText()` needs the same secure context). A claim is therefore
 claim, and the first version of this shipped a status line that said "Path copied" over an
 empty clipboard.
 
-`src/app/shared/clipboard.ts` now treats the two paths differently by environment: outside
-jweb a successful write is believed, inside jweb nothing is. It attempts the copy anyway,
-then shows the path in a focused, pre-selected field and waits for the browser's own
-`copy` event - which fires only when a copy really happens, and is the only honest
-confirmation available. `copyMessage()` turns the outcome into one wording shared by the
-three devices that write files, and the "not copied" wording still names the folder, so
-the path is never unreachable.
+`copyPath()` treats the two paths differently by environment: outside jweb a successful
+write is believed, inside jweb nothing is. It attempts the copy anyway, then shows the
+path in a focused, pre-selected field and waits for the browser's own `copy` event -
+which fires only when a copy really happens, and is the only honest confirmation
+available. `copyMessage()` turns the outcome into one wording shared by the three
+devices that write files, and the "not copied" wording still names the folder, so the
+path is never unreachable.
+
+**It lives in `@m4l-jweb/bridge` as of 1.2.1**, not here. Three devices had rediscovered
+the same trap, and the failure mode is a lie in the UI rather than a crash - which is
+the test for whether something is the library's. `src/app/shared/clipboard.ts` is
+deleted; the devices import `copyPath` / `copyMessage` from the bridge and behave
+exactly as before.
 
 **Unverified as of 1.0.0**, because Export never produced a file to copy the folder of
 (§2d). TODO item 1.
