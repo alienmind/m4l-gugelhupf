@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft, ClipboardCopy, LayoutGrid } from "lucide-react";
-import { bindInlet, onNote, saveToFile, uiReady } from "@m4l-jweb/bridge";
+import { bindInlet, copyMessage, copyPath, onNote, saveToFile, uiReady } from "@m4l-jweb/bridge";
 import { audioContext, decodeSample, playBuffer, type DecodedSample } from "../shared/webaudio";
-import { copyMessage, copyPath } from "../shared/clipboard";
+
 import { bootScope, compile, queryWindow, hapToVoice } from "../../max/shared/engine.mjs";
 import { renderPeriod } from "../../lib/render/determinism";
 import { audioBufferToWav } from "../../lib/render/wav";

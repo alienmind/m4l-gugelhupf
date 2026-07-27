@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight, ClipboardCopy, GripVertical, Search, Square } from "lucide-react";
-import { bindInlet, saveToFile, uiReady } from "@m4l-jweb/bridge";
+import { bindInlet, copyMessage, copyPath, saveToFile, uiReady } from "@m4l-jweb/bridge";
 import { decodeSample, playBuffer } from "../shared/webaudio";
-import { copyMessage, copyPath } from "../shared/clipboard";
+
 import { cn } from "@/lib/utils";
 import {
 	DEFAULT_QUANT,
