@@ -256,6 +256,32 @@
 		return found;
 	}
 
+	/**
+	 * The name a bare `slider()` should carry: the METHOD it is an argument to.
+	 *
+	 * `.lpf(slider(600, 200, 2000))` is a cutoff, and the user already said so by
+	 * writing `lpf` - asking them to repeat it in an options object to get a dial that
+	 * is not called "slider 1" is asking twice. Only `m4lKnob({ name })` used to
+	 * produce a real name, so every plain slider reached Live anonymous.
+	 *
+	 * Looked up BACKWARDS from this widget's own source offset, not by scanning the
+	 * file forwards: the widgets are re-ordered by `order`, and a forward scan pairs
+	 * the Nth method with the Nth slot rather than with its own slider. `[^()]*$`
+	 * requires the argument list to still be open at the widget, so `.s("sawtooth")`
+	 * before an unrelated slider does not claim it.
+	 */
+	function methodNameFor(code, w) {
+		if (typeof code !== "string" || !w || typeof w.from !== "number") return "";
+		var before = code.slice(0, w.from);
+		// The widget's offset points at the slider's FIRST ARGUMENT, so `slider(` is
+		// normally still open in front of it - and its paren would stop the scan below
+		// before it reached the method. Drop that call first; the method is then
+		// whatever call is still open, `.lpf(` or `.lpf(200, `.
+		before = before.replace(/\bslider\s*\(\s*[^()]*$/, "");
+		var m = /\.([A-Za-z_$][\w$]*)\s*\(\s*[^()]*$/.exec(before);
+		return m ? m[1] : "";
+	}
+
 	/** Slot index -> the slider it is carrying. */
 	var sliderMap = [];
 	var lastSliderKey = "";
@@ -287,7 +313,10 @@
 		var key = ordered
 			.map(function (w) {
 				var o = opts[w.to] || {};
-				return w.id + ":" + w.min + ":" + w.max + ":" + (o.name || "") + ":" + (o.unit || "");
+				// The inferred name is part of the key: moving a slider from `.lpf(...)`
+				// to `.room(...)` changes nothing else about the widget, and without this
+				// the dial keeps the old method's name.
+				return w.id + ":" + w.min + ":" + w.max + ":" + (o.name || methodNameFor(editor.code, w)) + ":" + (o.unit || "");
 			})
 			.join("|");
 		if (key === lastSliderKey) return;
@@ -306,19 +335,27 @@
 				// not ours to reset.
 				if (previouslyOwned[n]) {
 					max.outlet("param_label", param, "S" + (n + 1));
-					max.outlet("param_range", param, 0, 1);
+					max.outlet("slider_range", param, 0, 1);
 					max.outlet("slider_clear", param);
 				}
 				continue;
 			}
 			var o = opts[w.to] || {};
 			sliderMap[n] = { id: w.id, min: Number(w.min), max: Number(w.max) };
-			max.outlet("param_label", param, o.name || "slider " + (n + 1));
+			// An explicit `m4lKnob({ name })` wins; otherwise the wrapping method is the
+			// name; "slider N" is the last resort, for a slider that is not an argument
+			// to anything.
+			max.outlet("param_label", param, o.name || methodNameFor(editor.code, w) || "slider " + (n + 1));
 			if (o.unit) {
 				max.outlet("param_unit", param, o.unit);
 				max.outlet("slider_unit", param, o.unit);
 			}
-			if (w.max > w.min) max.outlet("param_range", param, Number(w.min), Number(w.max));
+			// NOT `param_range`. Widening a dial's travel at runtime takes, and then the
+			// dial stops following its automation lane and any Rack macro mapped to it -
+			// both keep writing the build-time 0..1 domain, so the value pins at the
+			// bottom and the knob never moves. The dial stays 0..1 and the range travels
+			// to the device view instead, which scales.
+			if (w.max > w.min) max.outlet("slider_range", param, Number(w.min), Number(w.max));
 			// The dial should start where the CODE says rather than wherever it was
 			// left by the last pattern. A window cannot write a Live parameter, so the
 			// device page does it (forwarded by wrapper/device.ts).
@@ -375,9 +412,10 @@
 			// not echoed back to any page - see wrapper/device.ts.
 			max.outlet("slider_unit", param, unit);
 		}
-		// Ask for the dial's travel to become the pattern's. The wrapper answers
-		// whether Live took it, and the answer decides who does the scaling.
-		if (range && hi > lo) max.outlet("param_range", param, lo, hi);
+		// The travel goes to the device view, NOT onto the Live dial. Widening a dial
+		// at runtime costs it its automation lane and its macro mapping (see
+		// syncSliders), which is more than a nicer readout is worth. The page scales.
+		if (range && hi > lo) max.outlet("slider_range", param, lo, hi);
 	}
 
 	function ready(fn) {

@@ -91,6 +91,12 @@ export default [
 		// renamed, with no reply - so the promise never settles and the UI hangs on
 		// "Rendering...". Anything that writes a file needs this chain.
 		chains: ["webaudio", "download"],
+		// The device page's own ring buffer, the same 66 ms the Studio window asks for
+		// (src/app/strudel/surface.ts). The window got it in 1.1.0 and the page did not,
+		// so the device view's scratchpad engine chopped while the Studio played clean -
+		// one setting that only ever reached one of the two pages. The object default
+		// (~21 ms at 48 kHz) underruns within ~30 s on a sustained tone.
+		latency: 66,
 		unmatchedTo: "js",
 	},
 	{
@@ -107,6 +113,9 @@ export default [
 		type: "instrument",
 		mode: "synth",
 		chains: ["webaudio", "midiin"],
+		// Same ring buffer as the main device. This one sustains too - a held MIDI note
+		// is exactly the tone the object default (~21 ms at 48 kHz) underruns on.
+		latency: 66,
 		unmatchedTo: "js",
 	},
 ];

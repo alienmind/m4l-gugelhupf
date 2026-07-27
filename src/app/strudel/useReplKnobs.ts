@@ -71,12 +71,18 @@ export function useReplKnobs(): { faders: SliderKnob[]; declared: boolean } {
 				return next;
 			});
 		});
-		bindInlet("param_desc_range", (id: unknown, lo: unknown, hi: unknown, took: unknown) => {
+		// The slider's real travel, sent by the Studio for this view alone.
+		//
+		// It used to arrive as `param_desc_range` - the wrapper's echo of a range it
+		// had just written onto the Live dial. That write is gone: widening a dial at
+		// runtime costs it its automation lane and any macro mapped to it. So the dial
+		// stays 0..1, `real` is always false, and the scaling below is always ours.
+		bindInlet("slider_range", (id: unknown, lo: unknown, hi: unknown) => {
 			const i = knobIndexOf(id);
 			if (!(i >= 0 && i < 8)) return;
 			setDescs((prev) => ({
 				...prev,
-				[i]: { ...(prev[i] ?? { label: `S${i + 1}` }), min: Number(lo), max: Number(hi), real: Number(took) === 1 },
+				[i]: { ...(prev[i] ?? { label: `S${i + 1}` }), min: Number(lo), max: Number(hi), real: false },
 			}));
 		});
 

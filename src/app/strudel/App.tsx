@@ -42,7 +42,11 @@ type ViewId = (typeof VIEWS)[number]["id"];
  * bottom status row.
  */
 export default function App() {
-	const s = useStrudelRender();
+	// BEFORE useStrudelRender, and that order is load-bearing: whether the Studio has
+	// declared any faders decides whether this page's scratchpad is allowed to name the
+	// S1..S8 dials. Two engines, one pool - see useSliderKnobs' `describe`.
+	const { faders, declared } = useReplKnobs();
+	const s = useStrudelRender(!declared);
 	const [showAbout, setShowAbout] = useState(false);
 
 	// The native transport panel behind the view switch - the MIDI device's mechanism.
@@ -62,7 +66,6 @@ export default function App() {
 	const [view, setView] = useState<ViewId>("code");
 	/** Once the user picks a view by hand, stop moving it under them. */
 	const [viewPinned, setViewPinned] = useState(false);
-	const { faders, declared } = useReplKnobs();
 
 	// A fader appearing in the code means there is now something to GRAB, and
 	// hunting for the view to grab it in is the friction this removes.
