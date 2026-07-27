@@ -7,8 +7,8 @@ import {
 	initAudio,
 	getAudioContext,
 } from "superdough";
-import { bindInlet, saveToFile } from "@m4l-jweb/bridge";
-import { copyMessage, copyPath } from "../shared/clipboard";
+import { bindInlet, copyMessage, copyPath, saveToFile } from "@m4l-jweb/bridge";
+
 import { bootScope, compile } from "../../max/shared/engine.mjs";
 import { renderPeriod } from "../../lib/render/determinism";
 import { renderCycles } from "../../lib/render/offline";
