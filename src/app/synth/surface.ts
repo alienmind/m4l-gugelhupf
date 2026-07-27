@@ -11,13 +11,12 @@
  * over playing a pattern: the sound is under the fingers, and the notes come from
  * wherever the musician already plays them.
  */
-import { button, defineSurface, dial, window } from "@m4l-jweb/surface";
-import { codeSlot, helpQuerySlot } from "../shared/surface";
+import { button, defineSurface, knobPool, window } from "@m4l-jweb/surface";
+import { KNOB_POOL, codeSlot, helpQuerySlot } from "../shared/surface";
 
-/** One of the eight normalized dials - the Superdough device's convention, unchanged:
- *  a dial's travel is stamped at build time, so the range in the code is applied in the
- *  page (see shared/useSliderKnobs.ts). */
-const sliderDial = (n: number) => dial({ range: [0, 1] as [number, number], default: 0, short: `S${n}` });
+/** The eight normalized dials - the Superdough device's convention, unchanged. A dial's
+ *  travel is stamped at build time, so the range in the code is applied in the page
+ *  (see shared/useSliderKnobs.ts); `knobPool` is the library's name for that pattern. */
 
 /**
  * THE SOUND SPEC a fresh device opens with - a superdough VALUE, not a pattern.
@@ -34,14 +33,7 @@ export default defineSurface({
 		/** The view switch onto the native knob panel - the Superdough device's mechanism.
 		 *  No `play` to keep company here: a synth plays when a note arrives. */
 		transport: button({ default: false, label: "Back", short: "Back" }),
-		s1: sliderDial(1),
-		s2: sliderDial(2),
-		s3: sliderDial(3),
-		s4: sliderDial(4),
-		s5: sliderDial(5),
-		s6: sliderDial(6),
-		s7: sliderDial(7),
-		s8: sliderDial(8),
+		...knobPool(KNOB_POOL),
 	},
 
 	layout: {

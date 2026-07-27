@@ -16,6 +16,17 @@
 import { button, state } from "@m4l-jweb/surface";
 
 /**
+ * How many native dials the slider pool holds. Eight is Push's bank size.
+ *
+ * Here rather than next to either device's surface because three places have to agree
+ * on it: the declaration (`knobPool(KNOB_POOL)`), the hook that lends the dials out,
+ * and the device view that echoes the Studio's faders. The parameter ids follow from
+ * it - `knobPool` names them `s1`..`s8` and `KNOB_IDS` spells the same list back.
+ */
+export const KNOB_IDS = ["s1", "s2", "s3", "s4", "s5", "s6", "s7", "s8"] as const;
+export const KNOB_POOL = KNOB_IDS.length;
+
+/**
  * The transport control: play/stop, as a REAL Live parameter - automatable, and
  * macro-mappable so a Rack macro (or a Push button) can start and stop the sequencer.
  *

@@ -6,8 +6,8 @@
  * remains is the transport pair - the macro-mappable Play/Stop and the native panel
  * that makes it clickable - plus the code slot and the three windows.
  */
-import { button, defineSurface, dial, window } from "@m4l-jweb/surface";
-import { codeSlot, helpQuerySlot, transportParams } from "../shared/surface";
+import { button, defineSurface, knobPool, window } from "@m4l-jweb/surface";
+import { KNOB_POOL, codeSlot, helpQuerySlot, transportParams } from "../shared/surface";
 
 /**
  * THE SLIDER KNOBS. strudel.cc renders `slider(0.571, 0, 1)` as an inline widget; here
@@ -17,9 +17,11 @@ import { codeSlot, helpQuerySlot, transportParams } from "../shared/surface";
  * carries the travel and the app denormalizes into the slider's own min..max on each
  * re-render. Automatable, macro-mappable, on Push - a knob turn re-renders the pattern
  * with the new value (one render of latency, the honest cost of pre-rendered audio).
+ *
+ * `knobPool(8)` is the library's word for exactly this: a fixed set of interchangeable
+ * dials, lent out to controls that are not known until the user's code runs. Emits the
+ * same s1..s8 at 0..1 the eight hand-written declarations did.
  */
-const sliderDial = (n: number) =>
-	dial({ range: [0, 1] as [number, number], default: 0, short: `S${n}` });
 
 /**
  * The pattern this device opens with. Full Strudel, synth-only on purpose: it renders
@@ -37,14 +39,7 @@ export default defineSurface({
 		 * macro-mappable Play/Stop lives.
 		 */
 		transport: button({ default: false, label: "Back", short: "Back" }),
-		s1: sliderDial(1),
-		s2: sliderDial(2),
-		s3: sliderDial(3),
-		s4: sliderDial(4),
-		s5: sliderDial(5),
-		s6: sliderDial(6),
-		s7: sliderDial(7),
-		s8: sliderDial(8),
+		...knobPool(KNOB_POOL),
 	},
 
 	/**

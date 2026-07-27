@@ -1,10 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { bindInlet } from "@m4l-jweb/bridge";
 import { useParam } from "@m4l-jweb/surface/react";
+import { KNOB_IDS } from "../shared/surface";
 import type { SliderKnob } from "../shared/useSliderKnobs";
 import surface from "./surface";
-
-const KNOB_IDS = ["s1", "s2", "s3", "s4", "s5", "s6", "s7", "s8"] as const;
 
 /** `s3` -> 2. The library talks in parameter ids; the dials are a numbered pool. */
 const knobIndexOf = (id: unknown) => KNOB_IDS.indexOf(String(id) as (typeof KNOB_IDS)[number]);
