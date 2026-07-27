@@ -17,15 +17,20 @@ more; what follows is what 1.2 has to answer.
 
 ## Waiting on the library
 
-Three things in this backlog are m4l-jweb's to solve, and the entries below say so
-rather than describing a device-side workaround twice. See
+One thing in this backlog is m4l-jweb's to solve, and the entry below says so rather
+than describing a device-side workaround twice. See
 [m4l-jweb's TODO](https://github.com/alienmind/m4l-jweb/blob/main/doc/TODO.md).
 
 | Upstream | What it gives this repo |
 |---|---|
 | `defineFiles()` (item 1) | The `download` chain, the device-folder plumbing and the `save_*` selectors as ONE declaration. Item 1 below is what happens when those three drift apart. |
-| The folder-path helper (item 2) | An honest "copied / user copied / not copied", library-side. Deletes `src/app/shared/clipboard.ts`. |
-| `useControls()` + `knobPool()` (shipped 1.1.0) | The knob borrowing this repo still hand-rolls in `src/app/shared/useSliderKnobs.ts`. Adopt it and delete the bookkeeping; the naming and range handshake is already the library's. |
+
+The other two rows are gone. `useControls()` + `knobPool()` are adopted as of 1.2.1 -
+`src/app/shared/useSliderKnobs.ts` is now the Strudel-specific half alone (reading a
+name out of the source text, pushing values back into the pattern), and the borrowing,
+the naming, the range handshake and the seeding are the library's. The folder-path
+helper shipped as `copyPath()` in `@m4l-jweb/bridge`, and `src/app/shared/clipboard.ts`
+is deleted; what remains here is the VERIFICATION, which item 2 below still owns.
 
 ## Open Tasks
 
@@ -67,11 +72,15 @@ back. `src/app/shared/clipboard.ts` therefore trusts no claim: it attempts the c
 shows the path in a focused, pre-selected field, and treats the browser's own `copy`
 event as the only confirmation.
 
-**The fix is upstream** (the folder-path helper), and this file's copy should be deleted
-when it lands. What remains here is the verification, once item 1 writes a file: if the
-manual field turns out not to receive Ctrl+C inside jweb either, then a device page
-cannot reach the system clipboard at all and the answer is a Max-side one, or none.
-History of what does not work: [DRAWER_OF_FAILED_IDEAS.md](DRAWER_OF_FAILED_IDEAS.md).
+**The fix landed upstream in 1.2.1**: `copyPath()` / `copyMessage()` in
+`@m4l-jweb/bridge`, and this repo's copy is deleted - all three devices now import the
+library's. Behaviour is unchanged on purpose, so this item is still open for the same
+reason it always was: nobody has watched it work.
+
+What remains is the VERIFICATION, once item 1 writes a file: if the manual field turns
+out not to receive Ctrl+C inside jweb either, then a device page cannot reach the system
+clipboard at all and the answer is a Max-side one, or none. History of what does not
+work: [DRAWER_OF_FAILED_IDEAS.md](DRAWER_OF_FAILED_IDEAS.md).
 
 ### 3. FEAT - native MIDI input (`midiIn`/`kb()`) and MIDI output
 
