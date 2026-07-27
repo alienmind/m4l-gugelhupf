@@ -64,7 +64,14 @@ const MAX_EXPORT_CYCLES = 32;
  *  stable - an inline `{}` would be a new object every render. */
 const EMPTY_CTX = {} as const;
 
-export function useStrudelRender() {
+export function useStrudelRender(
+	/**
+	 * Whether this page names the S1..S8 dials, or leaves them to the Studio. False
+	 * whenever the Studio's pattern has declared faders of its own - it owns the pool
+	 * then, and a second writer just renames its dials from under it.
+	 */
+	describeKnobs = true,
+) {
 	const [samplesNote, setSamplesNote] = useState<string | null>("Loading samples...");
 	const initialized = useRef(false);
 	/** Pattern time pinned to audio time: events derive from this, not from delayMs. */
@@ -167,7 +174,7 @@ export function useStrudelRender() {
 	}, [folder]);
 
 	// Every slider() in the pattern, on a native S1..S8 dial.
-	const sliders = useSliderKnobs(surface, engine.sliderSpecs, engine.text, engine.setSliderValues);
+	const sliders = useSliderKnobs(surface, engine.sliderSpecs, engine.text, engine.setSliderValues, describeKnobs);
 
 	// Stopping ends the timeline. Without this the next Run maps its first cycle against
 	// an anchor from minutes ago, which is guaranteed to be behind the audio clock - one

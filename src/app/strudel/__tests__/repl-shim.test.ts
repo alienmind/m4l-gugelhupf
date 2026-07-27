@@ -194,16 +194,22 @@ describe("m4l-shim", () => {
 		expect(m4lKnob(1)).toBe(0.75);
 	});
 
-	it("stops scaling once the dial itself carries the pattern's range", () => {
-		// The failure the previous attempt at this was reverted for: _parameter_range
-		// takes, the dial then reports IN THE NEW DOMAIN, and a page still normalizing
-		// 0..1 scales it a second time. Exactly one scaling, wherever it lives.
+	it("asks for no widening, and still scales exactly once if it ever happens", () => {
+		// The shim does NOT widen a dial any more: a dial whose range was widened at
+		// runtime stops following its automation lane and any macro mapped to it
+		// (m4l-jweb doc/MAX-FACTS.md). The travel goes to the device view instead, on
+		// `slider_range`, and this page keeps the scaling.
+		//
+		// The `param_range_ok` path below stays tested because the double-scaling it
+		// guards against is the reason an earlier attempt at all this was reverted: if
+		// anything ever does widen the dial, the value must not be scaled twice.
 		const queried: number[] = [];
 		(globalThis as Record<string, unknown>).signal = (fn: () => number) => ({ query: () => queried.push(fn()) });
 		mount();
 
 		const knob = (page.win.m4lKnob as (n: number, o: unknown) => { query: () => void })(1, { name: "cutoff", range: [200, 2200] });
-		expect(sent(page.outlets, "param_range")).toEqual([["param_range", "s1", 200, 2200]]);
+		expect(sent(page.outlets, "param_range")).toEqual([]);
+		expect(sent(page.outlets, "slider_range")).toEqual([["slider_range", "s1", 200, 2200]]);
 
 		page.inlets.set_s1(0.5); // still 0..1: the device has not answered yet
 		knob.query();
@@ -292,12 +298,50 @@ describe("m4l-shim", () => {
 		page.editor.widgets = [widget(48, 51, 0.3, 0, 1), widget(17, 20, 500, 100, 1000)];
 		vi.advanceTimersByTime(1000);
 
-		expect(sent(page.outlets, "param_range")).toEqual([
-			["param_range", "s1", 100, 1000],
-			["param_range", "s2", 0, 1],
+		expect(sent(page.outlets, "slider_range")).toEqual([
+			["slider_range", "s1", 100, 1000],
+			["slider_range", "s2", 0, 1],
 		]);
-		// No name given, so the dial says which slider it is rather than nothing.
-		expect(sent(page.outlets, "param_label").map((o) => o[2])).toEqual(["slider 1", "slider 2"]);
+		// The travel is described, never written onto the Live dial - that costs the
+		// dial its automation lane and its macro.
+		expect(sent(page.outlets, "param_range")).toEqual([]);
+		// No name given, so the WRAPPING METHOD is the name: the user already wrote
+		// `lpf`, and making them repeat it in an options object to avoid a dial called
+		// "slider 1" is asking twice.
+		expect(sent(page.outlets, "param_label").map((o) => o[2])).toEqual(["lpf", "gain"]);
+	});
+
+	it("names a bare slider after the method it is an argument to", () => {
+		// `sliderWithID`'s id carries the source POSITION, not a name, so there is
+		// nothing in the value to show a user. The surrounding method is the term the
+		// user already thinks in.
+		mount();
+		editor.codeIs('s("saw").lpf(slider(500, 100, 1000)).room(slider(0.3))');
+		const lpf = (editor.code as string).indexOf("500");
+		const room = (editor.code as string).indexOf("0.3");
+		page.editor.widgets = [widget(lpf, lpf + 3, 500, 100, 1000), widget(room, room + 3, 0.3, 0, 1)];
+		vi.advanceTimersByTime(1000);
+
+		expect(sent(page.outlets, "param_label").map((o) => o[2])).toEqual(["lpf", "room"]);
+	});
+
+	it("an explicit name beats the method, and a slider with no method still gets one", () => {
+		mount();
+		// `.lpf(...)` is right there, and is deliberately NOT what the dial is called:
+		// the user asked for "cutoff".
+		editor.codeIs("s(\"saw\").lpf(slider(500, 100, 1000, 1, { name: 'cutoff' }))");
+		const named = (editor.code as string).indexOf("500");
+		page.editor.widgets = [widget(named, named + 3, 500, 100, 1000)];
+		vi.advanceTimersByTime(1000);
+		expect(sent(page.outlets, "param_label").pop()).toEqual(["param_label", "s1", "cutoff"]);
+
+		// A slider that is an argument to nothing has no name to borrow, and an
+		// unlabelled fader is worse than a numbered one.
+		editor.codeIs("const x = slider(0.5)");
+		const bare = (editor.code as string).indexOf("0.5");
+		page.editor.widgets = [widget(bare, bare + 3, 0.5, 0, 1)];
+		vi.advanceTimersByTime(1000);
+		expect(sent(page.outlets, "param_label").pop()).toEqual(["param_label", "s1", "slider 1"]);
 	});
 
 	it("reads a name and a unit out of the code, since the transpiler drops them", () => {
@@ -349,7 +393,8 @@ describe("m4l-shim", () => {
 		const from = (editor.code as string).indexOf("500");
 		page.editor.widgets = [widget(from, from + 3, 500, 100, 1000)];
 		vi.advanceTimersByTime(3000);
-		expect(sent(page.outlets, "param_range")).toHaveLength(1);
+		expect(sent(page.outlets, "slider_range")).toHaveLength(1);
+		expect(sent(page.outlets, "param_label")).toHaveLength(1);
 	});
 
 	it("ignores a half-typed slider call rather than throwing", () => {

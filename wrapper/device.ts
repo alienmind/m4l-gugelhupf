@@ -389,6 +389,16 @@ function onWindowMessage(): void {
 		outlet(0, "slider_unit", String(arguments[2]), String(arguments[3]));
 		return;
 	}
+	// The slider's REAL travel, for the device view's own faders to draw and scale
+	// with. It used to arrive as the echo of `param_range` - but widening a dial's
+	// range at runtime kills its automation lane and any macro mapped to it, so the
+	// Studio no longer asks Live to widen anything and the range has to reach the
+	// device view on a channel of its own. Live's dials stay 0..1; only the fader,
+	// the readout and the pattern see 200..2000.
+	if (selector === "slider_range") {
+		outlet(0, "slider_range", String(arguments[2]), Number(arguments[3]), Number(arguments[4]));
+		return;
+	}
 	if (selector === "slider_clear") {
 		outlet(0, "slider_clear", String(arguments[2]));
 		return;

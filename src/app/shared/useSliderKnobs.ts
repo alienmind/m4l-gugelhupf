@@ -65,6 +65,17 @@ export function useSliderKnobs(
 	specs: SliderSpec[],
 	code: string,
 	setSliderValues: (values: (number | null)[]) => void,
+	/**
+	 * Whether this page is the one that NAMES the dials.
+	 *
+	 * The Strudel device has two engines against one pool - this page's scratchpad and
+	 * the Studio window's pattern - and both used to describe it, so a dial the Studio
+	 * had named `lpf` was renamed `slider 1` (or reset to `S1`) by whichever page
+	 * re-rendered last. The Studio owns the pattern, so the Studio owns the names; the
+	 * scratchpad only claims them when the Studio has declared nothing. Devices with a
+	 * single page leave this alone.
+	 */
+	describe = true,
 ): SliderKnob[] {
 	const labels = useMemo(() => sliderLabels(code, specs.length), [code, specs.length]);
 
@@ -82,7 +93,10 @@ export function useSliderKnobs(
 		[specs, labels],
 	);
 
-	const pooled = useControls(surface as never, controls, KNOB_IDS as never);
+	// `widenRange` is left off (the library's default): asking Live to widen a dial's
+	// travel at runtime costs that dial its automation lane and any macro mapped to it,
+	// so the dials stay 0..1 and the scaling happens here.
+	const pooled = useControls(surface as never, controls, KNOB_IDS as never, { describe });
 
 	// Push the current knob positions back into the pattern. Runs whenever a dial moves -
 	// from the web slider, an automation lane, a Push encoder or a macro, since all four
