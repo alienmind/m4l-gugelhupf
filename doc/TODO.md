@@ -40,20 +40,27 @@ is deleted; what remains here is the VERIFICATION, which item 2 below still owns
 `could not place save: -1 bytes at destination`. `-1` is what the wrapper reports when
 it cannot size the destination at all, so the `.part` was never placed over the target.
 
-**Re-test on 1.1.0 before debugging anything here** - the save protocol is the library's
-(`save_begin` / `save_chunk` / `save_end`, then a `file://` place through `[maxurl]`),
-and a related fix landed upstream after this was seen.
+**Re-tested on 1.2.1: still fails.** The save protocol is the library's (`save_begin` /
+`save_chunk` / `save_end`, then a `file://` place through `[maxurl]`), and the upstream
+fix that landed after this was first seen did not change the outcome. So it is not the
+version, and the triage below is live.
 
-If it still fails, in order:
+**Step 3 is already ruled out**: `alienmind-gugelhupf` declares `chains: ["webaudio",
+"download"]`, so `[maxurl]` is on the device. Two candidates remain.
 
 1. Does the `.part` exist next to the device, at the right size, after `save_end`? Then
    only the place step is broken.
 2. Does the device folder resolve to a real writable directory? An UNSAVED patcher has
-   no folder at all, and every path is then relative to nowhere.
-3. Is the `download` chain on the device? It owns `[maxurl]`, and without it the place
-   request leaves on an aux outlet with nothing on the other end - no error, no reply,
-   the promise never settles. This is exactly the failure `defineFiles()` exists to make
-   impossible.
+   no folder at all, and every path is then relative to nowhere. Worth checking FIRST -
+   it is one console line, and `-1 bytes at destination` is what a path relative to
+   nowhere would produce.
+3. ~~Is the `download` chain on the device?~~ It is. Kept here because it is the failure
+   `defineFiles()` exists to make impossible, and the next device to hit this will not
+   have checked.
+
+**The exact next test:** run Export and capture the Max console for the whole attempt.
+Nothing above can be narrowed without it - the console from a device that merely LOADED
+says nothing about a save.
 
 **Also unresolved: WHOSE pattern Export bounces.** It renders the scratchpad's, because
 that is the engine the device page has, and the music now lives in the Studio. Either it
