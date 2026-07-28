@@ -28,8 +28,9 @@ export default [
 		 * universe, downloads what you pick, and previews it through the track.
 		 *
 		 * `webaudio` is the preview: the page decodes and plays the sample, jweb~
-		 * sums it into the track's signal path. `download` remains for saveToFile,
-		 * which writes the auditioned file next to the device as the drag-out handle.
+		 * sums it into the track's signal path. Writing the auditioned file next to
+		 * the device - the drag-out handle - is declared in
+		 * src/app/sample-browser/files.ts, which derives the `download` chain.
 		 *
 		 * type "instrument": the browser ORIGINATES sound (the preview) and
 		 * processes nothing, so it fills a track's instrument slot rather than
@@ -39,7 +40,7 @@ export default [
 		ui: "sample-browser",
 		type: "instrument",
 		mode: "sample-browser",
-		chains: ["webaudio", "download"],
+		chains: ["webaudio"],
 		unmatchedTo: "js",
 	},
 	{
@@ -62,10 +63,7 @@ export default [
 		ui: "drums-sampler",
 		type: "instrument",
 		mode: "drums-sampler",
-		// `download` is here for [maxurl], which saveToFile's atomic place needs - the
-		// device downloads nothing to disk (samples are decoded in the page) but it does
-		// EXPORT bounces. Any device that writes a file needs this chain.
-		chains: ["webaudio", "midiin", "download"],
+		chains: ["webaudio", "midiin"],
 		unmatchedTo: "js",
 	},
 	{
@@ -85,12 +83,8 @@ export default [
 		ui: "strudel",
 		type: "instrument",
 		mode: "strudel",
-		// `download` is NOT about downloading here: it owns the [maxurl] object, and
-		// saveToFile's last phase places the verified .part over the destination with a
-		// file:// GET through it. Drop the chain and Export writes a .part that is never
-		// renamed, with no reply - so the promise never settles and the UI hangs on
-		// "Rendering...". Anything that writes a file needs this chain.
-		chains: ["webaudio", "download"],
+		// Export is declared in src/app/strudel/files.ts, and [maxurl] comes from there.
+		chains: ["webaudio"],
 		// The device page's own ring buffer, the same 66 ms the Studio window asks for
 		// (src/app/strudel/surface.ts). The window got it in 1.1.0 and the page did not,
 		// so the device view's scratchpad engine chopped while the Studio played clean -
