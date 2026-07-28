@@ -13,24 +13,18 @@ git history is the record of what shipped.
 1.1.0 shipped the Studio and the device view around it - the real local strudel.cc as
 the track's instrument, the pattern saved with the set, Live's transport and dials
 reaching it, and the three-view panel (ARCHITECTURE.md 4k). None of that is here any
-more; what follows is what 1.2 has to answer.
+more; what follows is what 1.3 has to answer.
 
 ## Waiting on the library
 
-One thing in this backlog is m4l-jweb's to solve, and the entry below says so rather
-than describing a device-side workaround twice. See
-[m4l-jweb's TODO](https://github.com/alienmind/m4l-jweb/blob/main/doc/TODO.md).
+Nothing, as of 1.3.0. `defineFiles()` shipped upstream and this repo consumes it:
+`src/app/{strudel,drums-sampler,sample-browser}/files.ts` is the single declaration that
+a device writes to disk, and the `download` chain, the device-folder message and the
+`save_*` selectors are all derived from it. `patcher/devices.mjs` lists no `download`
+and `wrapper/device.ts` has no `sendFolder()`.
 
-| Upstream | What it gives this repo |
-|---|---|
-| `defineFiles()` (item 1) | The `download` chain, the device-folder plumbing and the `save_*` selectors as ONE declaration. Item 1 below is what happens when those three drift apart. |
-
-The other two rows are gone. `useControls()` + `knobPool()` are adopted as of 1.2.1 -
-`src/app/shared/useSliderKnobs.ts` is now the Strudel-specific half alone (reading a
-name out of the source text, pushing values back into the pattern), and the borrowing,
-the naming, the range handshake and the seeding are the library's. The folder-path
-helper shipped as `copyPath()` in `@m4l-jweb/bridge`, and `src/app/shared/clipboard.ts`
-is deleted; what remains here is the VERIFICATION, which item 2 below still owns.
+`useControls()` + `knobPool()` were adopted in 1.2.1, and the folder-path helper shipped
+as `copyPath()` in `@m4l-jweb/bridge`.
 
 ## Open Tasks
 
@@ -45,18 +39,20 @@ it cannot size the destination at all, so the `.part` was never placed over the 
 fix that landed after this was first seen did not change the outcome. So it is not the
 version, and the triage below is live.
 
-**Step 3 is already ruled out**: `alienmind-gugelhupf` declares `chains: ["webaudio",
-"download"]`, so `[maxurl]` is on the device. Two candidates remain.
+**Step 3 is ruled out permanently now**, not just checked: `[maxurl]` is derived from
+`src/app/strudel/files.ts`, so the device cannot be built without it. Two candidates
+remain.
 
 1. Does the `.part` exist next to the device, at the right size, after `save_end`? Then
    only the place step is broken.
 2. Does the device folder resolve to a real writable directory? An UNSAVED patcher has
    no folder at all, and every path is then relative to nowhere. Worth checking FIRST -
    it is one console line, and `-1 bytes at destination` is what a path relative to
-   nowhere would produce.
-3. ~~Is the `download` chain on the device?~~ It is. Kept here because it is the failure
-   `defineFiles()` exists to make impossible, and the next device to hit this will not
-   have checked.
+   nowhere would produce. The wrapper now posts
+   `patcher is not saved - no device folder, and every relative path resolves against
+   nowhere` at ui_ready when that is the case, so the console answers this without a
+   separate test.
+3. ~~Is the `download` chain on the device?~~ Derived from the declaration.
 
 **The exact next test:** run Export and capture the Max console for the whole attempt.
 Nothing above can be narrowed without it - the console from a device that merely LOADED
@@ -67,29 +63,49 @@ that is the engine the device page has, and the music now lives in the Studio. E
 moves behind the shim (the Studio renders and saves) or it is cut. Decide before it is
 fixed - there is no point fixing a bounce of the wrong thing.
 
-### 2. FIXME - the path on the clipboard, still unconfirmed
+### 2. FIXME - does the sample browser's save reach a subdirectory at all?
 
-Never verified end to end, because Export never wrote a file (item 1): the button that
-reveals the path only appears once something has been written.
+**Unverified, and found by reading rather than by a failure report.** `localPath()`
+(`src/lib/samples.ts`) writes to `samples/<pack>/<name>_<n>.wav`, two levels down. The
+drawer records the opposite as measured fact:
+
+> **`saveToFile` to a SUBDIRECTORY fails the atomic place with `-1 bytes`.** Max's `[js]`
+> `File` and `[maxurl]` (libcurl) resolve `render/x.wav` differently.
+
+Both cannot be true. Either the browser's downloads have been failing at the place step
+(and the row's "Saved nothing" is the symptom nobody has reported), or the drawer entry
+is narrower than it reads. It is the SAME `-1` as item 1, from the same code path, so
+the two are probably one question.
+
+**The exact next test:** audition one sound in `alienmind-gugelhupf-sample-browser`,
+then check whether `samples/<pack>/` next to the .amxd holds the file or a `.part`, and
+capture the Max console. Nothing has been changed on a guess - the destination is still
+`samples/...`, because moving it flat would change the paths users drag from.
+
+### 3. TEST - the path on the clipboard, still unwatched
+
+Never verified end to end. It was blocked on item 1 - the copy button only appeared once
+something had been written, so a device whose Export failed could never be used to test
+the copy. **That coupling is gone**: `device_folder` arrives at `ui_ready` from the
+library's `defineFiles()` plumbing, and the button on `alienmind-gugelhupf` and
+`alienmind-gugelhupf-drums-sampler` follows the folder rather than the export. (The
+sample browser's still waits for a download, and correctly: it offers `samples/`, which
+does not exist until something lands in it.)
 
 What is known: `document.execCommand("copy")` **returns true in a device page and copies
 nothing**, and the page cannot detect it - `navigator.clipboard.readText()` needs a
 secure context and a device page is `file://`. So a copy can be claimed but never read
-back. `src/app/shared/clipboard.ts` therefore trusts no claim: it attempts the copy, then
-shows the path in a focused, pre-selected field, and treats the browser's own `copy`
+back. `copyPath()` in `@m4l-jweb/bridge` therefore trusts no claim: it attempts the copy,
+then shows the path in a focused, pre-selected field, and treats the browser's own `copy`
 event as the only confirmation.
 
-**The fix landed upstream in 1.2.1**: `copyPath()` / `copyMessage()` in
-`@m4l-jweb/bridge`, and this repo's copy is deleted - all three devices now import the
-library's. Behaviour is unchanged on purpose, so this item is still open for the same
-reason it always was: nobody has watched it work.
+**The exact next test:** load `alienmind-gugelhupf`, press the copy button WITHOUT
+exporting anything, and paste into Explorer/Finder. If the manual field turns out not to
+receive Ctrl+C inside jweb either, then a device page cannot reach the system clipboard
+at all and the answer is a Max-side one, or none. History of what does not work:
+[DRAWER_OF_FAILED_IDEAS.md](DRAWER_OF_FAILED_IDEAS.md).
 
-What remains is the VERIFICATION, once item 1 writes a file: if the manual field turns
-out not to receive Ctrl+C inside jweb either, then a device page cannot reach the system
-clipboard at all and the answer is a Max-side one, or none. History of what does not
-work: [DRAWER_OF_FAILED_IDEAS.md](DRAWER_OF_FAILED_IDEAS.md).
-
-### 3. FEAT - native MIDI input (`midiIn`/`kb()`) and MIDI output
+### 4. FEAT - native MIDI input (`midiIn`/`kb()`) and MIDI output
 
 Wanted in the device view's SCRATCHPAD as much as in the main pattern: the point of a
 second instance is control code, and `midiin` is not on this device's chain list yet.
@@ -115,7 +131,7 @@ devices. What is missing is (in) feeding live notes into the pattern scope and
 
   NOTE: For this one, I would need examples on how to use (concrete strudel patterns) for midi routing from within the device
 
-### 4. FEAT - orbit() support (multichannel out)
+### 5. FEAT - orbit() support (multichannel out)
 
 **Assessment.** Valid, UNVERIFIED at its foundation. superdough can already render
 orbits to separate channel pairs (`initAudio({ multiChannelOrbits: true })` exists),
@@ -133,7 +149,7 @@ build emits jweb~ with 2N channels and the `webaudio` chain fans pairs to
 `duck()` then works inside superdough with no Max help at all (it is orbit-level
 DSP in the page). If the spike fails: park in the drawer with the finding.
 
-### 5. FEAT - cross-device coordination in the Rack
+### 6. FEAT - cross-device coordination in the Rack
 
 **Assessment.** Valid, big, and last for a reason: it depends on nothing above but
 informs its value. Two separable halves that the original text mixed: (a) a
@@ -144,7 +160,7 @@ died with the WAV pipeline - effects are no longer "baked into the render", they
 are live - so the remaining value is: native dials/Push/automation on effects while
 superdough only sequences. Re-validate that this is still wanted before building.
 
-**Preliminary design (sketch, revisit after 8).** Channel: `[send]`/`[receive]`
+**Preliminary design (sketch, revisit later).** Channel: `[send]`/`[receive]`
 with a name derived from the track (the wrapper reads its own track id via LOM at
 init - ids are session-stable, and re-derived on load, never persisted). Protocol:
 the superdough device broadcasts per-stage effect values (`fx cutoff 800`), the fx
@@ -152,7 +168,7 @@ device consumes them exactly like its app's own `set_<id>` writes (the fan-in
 already exists in `fanParamInto`). A Rack the user builds maps its 16 macros
 across both devices' dials. Explicitly out of scope: any cross-TRACK routing.
 
-### 6. TEST - verify offline behavior in Live
+### 7. TEST - verify offline behavior in Live
 
 **Assessment.** Partly done. The persistent page-side cache shipped in 1.0.0 and was
 verified in Live: a sample played once online still plays after a restart with the

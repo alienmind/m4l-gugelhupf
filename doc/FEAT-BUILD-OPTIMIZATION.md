@@ -1,32 +1,67 @@
-# Build Optimization Plan
+# Build Optimization - what was slow, and what it was not
 
-The current build process is indeed cumbersome, taking around 30-40 seconds to complete because of how Max for Live (`m4l-jweb`) requires web assets to be packaged. 
+Each `.amxd` embeds its own UI as a single HTML payload, and every floating window is
+another page, so `scripts/build-ui.mjs` runs Vite 17 times. A full UI build took **40.6s**.
 
-Because each Max for Live device operates in isolation without a shared `dist` folder at runtime, each `.amxd` device must embed its own UI code as a single HTML payload. Additionally, every floating window (Help, Studio, etc.) requires its own HTML payload.
-Currently, `scripts/build-ui.mjs` runs Vite sequentially for each device and window (about 25 times). In each run, Vite transforms the entire Strudel engine (1600+ modules), which is why you see all those "modules transformed" logs and the build takes a while.
+## The premise was wrong
 
-## Proposed Options
+This document used to say the cost was Vite "transforming the entire Strudel engine
+(1600+ modules)" on every run, and proposed three ways to stop doing that. A device
+build does parse ~1785 modules. They are not the engine:
 
-> [!IMPORTANT]
-> **Option 1: The Unified "Mega" Bundle (Recommended)**
-> Instead of 25 separate builds, we run Vite **exactly once**. We build a single, unified `index.html` that contains the UI for *all* devices and windows. 
-> - **How it works**: The app would look at a URL parameter (e.g., `?device=drums-midi&window=help`) to decide which view to render. `m4l-jweb` will then embed this single `index.html` into all 8 `.amxd` files.
-> - **Pros**: Drastically reduces build time (from ~30s to ~5s). Much simpler build script.
-> - **Cons**: The `.amxd` files will be slightly larger because each device will contain the code for the others. However, since the `.amxd` files are gzipped, the size difference will likely be only a few hundred kilobytes, which is perfectly acceptable for Max devices.
+| Origin | Modules |
+|---|---|
+| `lucide-react` | 1545 |
+| this repo's `src/` | 49 |
+| the whole Strudel engine (core, mini, transpiler, tonal, superdough) | 12 |
+| react + react-dom + everything else | ~25 |
 
-> [!NOTE]
-> **Option 2: Pre-bundle the Strudel Engine**
-> Keep the current "one build per device" architecture (as described in `vite.config.ts`), but pre-bundle the heavy Strudel engine.
-> - **How it works**: We add a pre-build step that uses `esbuild` to compile `@strudel/*` into a single `strudel-core.js` file. The 25 Vite builds will then import this pre-built file instead of transforming 1600+ modules every time.
-> - **Pros**: Preserves the strict separation of code per device (a MIDI device's bundle carries no sampler code). 
-> - **Cons**: Still runs Vite 25 times, so the build might still take 10-15 seconds. Slightly more complex configuration.
+`lucide-react`'s barrel is one module per icon, and every device imports it for a
+handful of them. **85% of every build's module graph was icons.**
 
-> [!TIP]
-> **Option 3: Multi-page Vite Build**
-> We pass multiple virtual HTML files into a single Vite build run. 
-> - **Pros**: Vite resolves the module graph once, maintaining separate bundles.
-> - **Cons**: `vite-plugin-singlefile` does not always play nicely with multiple Rollup input files. We would likely have to write a custom Rollup plugin to inline each entry into its respective HTML file, making the build system more fragile.
+## What was tried
 
-## Open Questions
+**Option 2, pre-bundling the engine with esbuild** - the option this document
+recommended keeping the architecture for. Built, measured, dropped: **40.6s -> 41.1s**,
+inside the noise, because the engine is 12 modules. It also grew every bundle (up to
++151 KB on `alienmind-gugelhupf`), because esbuild's output is opaque to rollup's
+tree-shaking. It is in `git log`, not in the tree.
 
-Which option would you like to proceed with? Option 1 provides the biggest speedup, while Option 2 strictly respects the architectural note in `vite.config.ts` about not shipping a sibling device's code.
+**Option 1, the unified mega bundle** - rejected without building. It breaks an
+invariant the library pins upstream (`tests/bundle.test.mjs`): each device ships its
+own app and none of its siblings'. That test exists because the failure is silent - a
+device carrying the wrong UI still builds, installs and loads.
+
+**esbuild-bundling the icon barrel**, the same trick applied to the right dependency.
+Collapses it to one module, but esbuild emits the re-exports as a namespace object
+built by its `__export` helper - getters, which rollup cannot see through. Every page
+then shipped the whole icon set: +770 KB each, on 17 pages.
+
+## What shipped
+
+A generated **barrel of the icons actually imported**, each re-exported from its own
+file (`scripts/prebundle-deps.mjs`, written to `dist/prebundle/lucide-react.js` and
+aliased in when `M4L_PREBUNDLE` is set). Rollup keeps its per-export granularity, so it
+still shakes each device down to the icons that device draws.
+
+    40.6s -> 27.7s, and the bundles are byte-for-byte identical.
+
+Two things it needs, both of which were silent when missing:
+
+- **`treeshake.moduleSideEffects`** in `vite.config.ts` must mark `dist/prebundle/` as
+  side-effect free. `sideEffects: false` is read from the package.json of the package a
+  module resolves *through*, and a generated file in `dist/` is inside no package - so
+  rollup has to assume the barrel does something on import, keeps it whole, and every
+  page ships all 24 icons (+8.4 KB each). A `package.json` next to the barrel does not
+  help; the option does.
+- The name -> file map is **read out of lucide's real barrel**, not derived from the
+  name. lucide ships aliases (`CircleChevronLeft` and `ChevronLeftCircle` are one file),
+  and a PascalCase-to-kebab guess resolves those to files that do not exist.
+
+## What is left, if the build needs to get faster again
+
+The remaining 27.7s is not module parsing any more - it is rollup rendering and
+`vite-plugin-singlefile` inlining a ~1.4 MB bundle, 17 times. The next real lever is
+building the 17 pages **in parallel** rather than sequentially; they are only sequential
+because vite reads `DEVICE` from the environment, which a worker per build would fix.
+Nobody has measured what that would buy.

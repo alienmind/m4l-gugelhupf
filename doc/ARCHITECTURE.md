@@ -191,16 +191,24 @@ landed after this was seen, and re-testing against it comes before debugging any
 here. Diagnostic order: does the `.part` exist at the right size after `save_end`; does
 `deviceFolder()` resolve to a real writable directory (an unsaved patcher has none); is
 the `download` chain - which owns [maxurl], and therefore the place step - really wired.
-Tracked as TODO item 0, and it blocks the clipboard item behind it: the Copy button only
-appears once a file has been written.
+Tracked as TODO item 1. It NO LONGER blocks the clipboard item behind it: the Copy
+button used to appear only once a file had been written, so a device whose Export was
+failing could never be used to test the copy at all. The folder is known at `ui_ready`,
+independently of any write, and the button now follows the folder.
 
-**The rule to carry forward:** a device that writes a file gets `download` in its chain
-list AND `HAS_DEVICE_FOLDER` in `wrapper/device.ts`. The two travel together - the second
-is how the page learns where the file went, and what "Copy folder path" puts on the
-clipboard. Where it writes is per device, and the reveal must agree with it: the sample
-browser downloads into a `samples/` subfolder, the exporters write flat into the device
-folder. A reveal pointed at a folder nobody created is not a no-op, it is an OS error
-dialog.
+**The rule that used to be carried by hand, and is now declared.** A device that wrote a
+file needed `download` in its chain list AND `HAS_DEVICE_FOLDER` in `wrapper/device.ts` -
+two facts about one device, kept in step by memory, with a silent failure if either was
+missed. Both come from `src/app/<device>/files.ts` now (`defineFiles({ saves: true })`,
+upstream in 1.3.0): the build derives the chain, and the packaged wrapper sends
+`device_folder` itself. `wrapper/device.ts` has no `sendFolder()` any more, and the
+manifest entries list no `download`.
+
+Where a device writes is still its own business, and the copy affordance must agree with
+it: the sample browser downloads into a `samples/` subfolder and offers that path, the
+exporters write flat into the device folder and offer that. A path offered for a folder
+nobody created is not a no-op, it is an OS error dialog - which is why the browser's
+button still waits for a first download while the exporters' do not.
 
 **Rendering while playing: superdough is a singleton, so a bounce is a handover.**
 `getAudioContext()`, the output controller and the node pool are all module-level in
