@@ -11,6 +11,51 @@ import pkg from "./package.json";
 import { devices, uiDir } from "./scripts/devices.mjs";
 
 const strudelPkg = (p: string) => fileURLToPath(new URL(`./strudel/packages/${p}`, import.meta.url));
+const prebundled = (name: string) => fileURLToPath(new URL(`./dist/prebundle/${name}.js`, import.meta.url));
+
+/**
+ * Take the icons from dist/prebundle/ instead of walking lucide's whole barrel.
+ *
+ * `scripts/prebundle-deps.mjs` writes it, and build-ui.mjs sets this before its 17 vite
+ * runs. Unset - `pnpm dev:*`, vitest, a bare `vite build` - the real package is used, so
+ * an icon added to the source is available immediately without regenerating anything.
+ */
+const PREBUNDLE = !!process.env.M4L_PREBUNDLE;
+
+/**
+ * The dependency aliases.
+ *
+ * ONE ENTRY PER PACKAGE, matched exactly. A plain-string prefix alias would rewrite
+ * `superdough/superdoughoutput.mjs` into `.../index.mjs/superdoughoutput.mjs`, which is
+ * why the two superdough entries are regexes and why the subpath is matched first.
+ *
+ * THE ENGINE IS NOT PREBUNDLED, on measurement. Compiling the Strudel submodule with
+ * esbuild first was the obvious move and it bought nothing - a full UI build went
+ * 40.6s -> 41.1s, inside the noise, because the engine is 12 modules of the graph and
+ * not the 1600 the plan assumed - while costing every bundle its size, up to +151 KB
+ * on the main device, since esbuild's output is opaque to rollup's tree-shaking.
+ * lucide-react is the one that pays.
+ */
+const engineAliases = [
+	{ find: "@strudel/core/fraction.mjs", replacement: strudelPkg("core/fraction.mjs") },
+	{ find: "@strudel/core", replacement: strudelPkg("core/index.mjs") },
+	{ find: "@strudel/mini", replacement: strudelPkg("mini/index.mjs") },
+	{ find: "@strudel/transpiler", replacement: strudelPkg("transpiler/index.mjs") },
+	{ find: "@strudel/tonal", replacement: strudelPkg("tonal/index.mjs") },
+	{ find: "@strudel/webaudio", replacement: strudelPkg("webaudio/index.mjs") },
+	{ find: "@strudel/draw", replacement: strudelPkg("draw/draw.mjs") },
+	{ find: "supradough", replacement: strudelPkg("supradough/index.mjs") },
+	// superdough: the REAL synths/samples/effects, rendered offline into WAV
+	// (see doc SUPERDOUGH Rendering). The renderer imports both the barrel
+	// ("superdough") and a subpath ("superdough/superdoughoutput.mjs"), so match
+	// each precisely - a plain-string prefix alias would rewrite the subpath to
+	// .../index.mjs/superdoughoutput.mjs.
+	{ find: /^superdough$/, replacement: strudelPkg("superdough/index.mjs") },
+	{ find: /^superdough\/(.*)$/, replacement: strudelPkg("superdough/$1") },
+	// The icons, from the generated barrel of the ones actually used. Unset, the
+	// package's own barrel is taken - 1545 modules for a handful of them.
+	...(PREBUNDLE ? [{ find: /^lucide-react$/, replacement: prebundled("lucide-react") }] : []),
+];
 
 /**
  * ONE BUILD PER DEVICE.
@@ -46,26 +91,17 @@ export default defineConfig(() => {
 		plugins: [react(), tailwindcss(), bundleAudioWorklet(), viteSingleFile()],
 		resolve: {
 			alias: [
-				{ find: "@device/App", replacement: fileURLToPath(new URL(`./src/app/${DEVICE}/${WINDOW_ENTRY ?? "App"}`, import.meta.url)) },
+				{
+					find: "@device/App",
+					replacement: fileURLToPath(
+						new URL(`./src/app/${DEVICE}/${WINDOW_ENTRY ?? "App"}`, import.meta.url),
+					),
+				},
 				{ find: "@device", replacement: fileURLToPath(new URL(`./src/app/${DEVICE}`, import.meta.url)) },
 				{ find: "@", replacement: fileURLToPath(new URL("./src", import.meta.url)) },
-				// @strudel/* resolve into the git submodule (same aliases as
-				// vitest.config.ts) - the engine worker bundles the real engine.
-				{ find: "@strudel/core/fraction.mjs", replacement: strudelPkg("core/fraction.mjs") },
-				{ find: "@strudel/core", replacement: strudelPkg("core/index.mjs") },
-				{ find: "@strudel/mini", replacement: strudelPkg("mini/index.mjs") },
-				{ find: "@strudel/transpiler", replacement: strudelPkg("transpiler/index.mjs") },
-				{ find: "@strudel/tonal", replacement: strudelPkg("tonal/index.mjs") },
-				{ find: "@strudel/webaudio", replacement: strudelPkg("webaudio/index.mjs") },
-				{ find: "@strudel/draw", replacement: strudelPkg("draw/draw.mjs") },
-				{ find: "supradough", replacement: strudelPkg("supradough/index.mjs") },
-				// superdough: the REAL synths/samples/effects, rendered offline into WAV
-				// (see doc SUPERDOUGH Rendering). The renderer imports both the barrel
-				// ("superdough") and a subpath ("superdough/superdoughoutput.mjs"), so match
-				// each precisely - a plain-string prefix alias would rewrite the subpath to
-				// .../index.mjs/superdoughoutput.mjs.
-				{ find: /^superdough$/, replacement: strudelPkg("superdough/index.mjs") },
-				{ find: /^superdough\/(.*)$/, replacement: strudelPkg("superdough/$1") },
+				// The engine: the git submodule's sources, or the esbuild prebundle of them
+				// (see engineAliases above). vitest.config.ts always takes the sources.
+				...engineAliases,
 			],
 		},
 		define: {
@@ -89,6 +125,18 @@ export default defineConfig(() => {
 			// wipe the device view built just before it (build-ui.mjs renames around this).
 			outDir: `dist/ui/${DEVICE}`,
 			emptyOutDir: !process.env.WINDOW,
+			rollupOptions: {
+				treeshake: {
+					/**
+					 * The generated icon barrel has no side effects, and rollup has no way to
+					 * know it: `sideEffects: false` is read from the package.json of the
+					 * PACKAGE a module resolves through, and this file sits in dist/, inside
+					 * no package. Without this rollup keeps the barrel whole and every page
+					 * ships all 24 icons instead of the one or two it draws.
+					 */
+					moduleSideEffects: (id) => !id.includes("/dist/prebundle/"),
+				},
+			},
 		},
 	};
 	return config;

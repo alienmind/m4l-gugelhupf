@@ -14,12 +14,23 @@
  * gates it on WINDOW), or the window build wipes the folder. So the device view
  * is moved aside, the windows are built and renamed one by one, and it is moved
  * back.
+ *
+ * THE ICON BARREL IS GENERATED FIRST. Each of the runs below parsed ~1785 modules, and
+ * 1545 of them were lucide-react's - one module per icon, for the handful a device
+ * draws. prebundleDeps() writes a barrel of just the ones in use and M4L_PREBUNDLE
+ * points vite.config.ts's alias at it. The per-device split is untouched: a device still
+ * ships its own app and none of its siblings', and every bundle comes out the size it
+ * was.
  */
 import { build } from "vite";
 import { loadSurface } from "@m4l-jweb/build/surface";
 import { renameSync } from "node:fs";
 import path from "node:path";
 import { root, uiDirs } from "./devices.mjs";
+import { prebundleDeps } from "./prebundle-deps.mjs";
+
+prebundleDeps();
+process.env.M4L_PREBUNDLE = "1";
 
 for (const dir of uiDirs) {
 	process.env.DEVICE = dir;
@@ -33,7 +44,9 @@ for (const dir of uiDirs) {
 	// A `site:` window has no component of ours to bundle - its content is a
 	// prebuilt directory (scripts/build-repl.mjs), delivered as a sidecar folder
 	// rather than an embedded page. Vite has nothing to do for it.
-	const windows = (surface?.windows ? Object.keys(surface.windows) : []).filter((id) => !surface.windows[id].site);
+	const windows = (surface?.windows ? Object.keys(surface.windows) : []).filter(
+		(id) => !surface.windows[id].site,
+	);
 	if (!windows.length) continue;
 
 	renameSync(path.join(outDir, "index.html"), path.join(outDir, "../_device.html"));
