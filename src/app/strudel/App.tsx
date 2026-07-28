@@ -174,13 +174,15 @@ export default function App() {
 
 			{error && <span className="truncate text-[10px] leading-none text-destructive">{error}</span>}
 
-			{s.exportNote && (
+			{/* Shown as soon as the FOLDER is known, which is ui_ready - not once something
+			    has been exported. The two were tied together while the wrapper only sent the
+			    path next to a write, and the copy could then never be tried on a device whose
+			    Export was failing. */}
+			{(s.exportNote || s.folder) && (
 				<div className="flex items-center gap-2">
-					<span className="flex-1 truncate text-[10px] leading-none text-muted-foreground" title={s.exportNote}>
-						{s.exportNote}
+					<span className="flex-1 truncate text-[10px] leading-none text-muted-foreground" title={s.exportNote ?? s.folder ?? ""}>
+						{s.exportNote ?? s.folder}
 					</span>
-					{/* Only once something has been written - the folder may not exist before
-					    the first Export, and offering a path to nothing is worse than no button. */}
 					<Button
 						icon={ClipboardCopy}
 						onClick={s.copyFolder}

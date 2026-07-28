@@ -1,13 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft, ClipboardCopy, LayoutGrid } from "lucide-react";
-import { bindInlet, copyMessage, copyPath, onNote, saveToFile, uiReady } from "@m4l-jweb/bridge";
+import { copyMessage, copyPath, onDeviceFolder, onNote, saveToFile, uiReady } from "@m4l-jweb/bridge";
 import { audioContext, decodeSample, playBuffer, type DecodedSample } from "../shared/webaudio";
 
 import { bootScope, compile, queryWindow, hapToVoice } from "../../max/shared/engine.mjs";
 import { renderPeriod } from "../../lib/render/determinism";
 import { audioBufferToWav } from "../../lib/render/wav";
 import { asSampleCode } from "../../lib/strudelCode";
-import { IN } from "./protocol";
 import { useStateSync, useWindow } from "@m4l-jweb/surface/react";
 import { cn } from "@/lib/utils";
 import { tokenAtCaret } from "@/lib/reference";
@@ -315,7 +314,7 @@ export default function App() {
 	}, [bankName]);
 
 	useEffect(() => {
-		bindInlet(IN.device_folder, (path) => setFolder(String(path)));
+		onDeviceFolder(setFolder);
 		// A MIDI note from a sequencer in front of the Sampler plays the bank's sound for
 		// that note (Drum Rack convention). Bound once; reads the current bank via refs.
 		onNote((pitch, velocity) => {
@@ -466,16 +465,17 @@ export default function App() {
 				>
 					{exportNote ?? (view === "code" ? codeStatus : status)}
 				</span>
-				{/* Enabled once something has been written: before the first Export the
-				    folder may not exist yet, and a path to nothing is worse than no button. */}
+				{/* Enabled as soon as the FOLDER is known, which is ui_ready. It used to wait
+				    for an Export, which meant the copy could never be tried on a device whose
+				    Export was failing - and the folder is where you would go to look. */}
 				<Button
 					icon={ClipboardCopy}
 					onClick={copyFolder}
-					disabled={!exportNote || !folder}
+					disabled={!folder}
 					title={
 						folder
 							? "Copy the device folder path to the clipboard, to paste into Explorer/Finder"
-							: "Export something first"
+							: "The patcher is not saved, so the device has no folder"
 					}
 				/>
 			</div>

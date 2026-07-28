@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight, ClipboardCopy, GripVertical, Search, Square } from "lucide-react";
-import { bindInlet, copyMessage, copyPath, saveToFile, uiReady } from "@m4l-jweb/bridge";
+import { bindInlet, copyMessage, copyPath, onDeviceFolder, saveToFile, uiReady } from "@m4l-jweb/bridge";
 import { decodeSample, playBuffer } from "../shared/webaudio";
 
 import { cn } from "@/lib/utils";
@@ -106,7 +106,7 @@ export default function App() {
 	}, []);
 
 	useEffect(() => {
-		bindInlet(IN.device_folder, (path) => setFolder(String(path)));
+		onDeviceFolder(setFolder);
 		uiReady();
 		return clearPreview; // a device view that goes away must not leave a loop running
 	}, [clearPreview]);
