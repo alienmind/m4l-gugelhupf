@@ -64,13 +64,15 @@ var IS_STRUDEL = STRUDEL_MODE === "strudel";
  *  notes are the trigger. It wants none of the observers below either. */
 var IS_SYNTH = STRUDEL_MODE === "synth";
 /**
- * The devices that put files in the device folder, and therefore need to tell the page
- * where that folder is and to reveal it on request.
+ * The devices that put files in the device folder.
  *
- * It is no longer only about SAMPLES. The browser saves each auditioned file (a file on
- * disk is what makes a row draggable into a track), and both pattern devices write WAV
- * bounces with Export. Anything that writes needs the `download` chain for [maxurl] and
- * belongs in here - the two travel together.
+ * It used to also gate SENDING that folder to the page, next to a `download` chain
+ * listed by hand in the manifest - three facts about one device, kept in step by
+ * memory. All three are now one `defineFiles()` declaration per device
+ * (src/app/<device>/files.ts), and the library sends `device_folder` itself.
+ *
+ * What is left here is the one thing that is genuinely ours: these devices do not
+ * poll for clips. They are instruments and browsers, not the MIDI devices.
  */
 var HAS_DEVICE_FOLDER = IS_SAMPLE_BROWSER || IS_DRUMS_SAMPLER || IS_STRUDEL;
 
@@ -204,23 +206,14 @@ function sendQuant(): void {
 	if (IS_SAMPLE_BROWSER) outlet(0, "quantization", liveQuant);
 }
 
-/**
- * The device's own folder, as an absolute path.
- *
- * It goes out as ONE symbol. A real install has spaces in this path ("Ableton
- * Library"), and a path that travels through a patcher as message text would split
- * there into atoms - which is exactly why the download itself never sends one. Out
- * of [js] it stays whole.
- */
-function sendFolder(): void {
-	if (!HAS_DEVICE_FOLDER) return;
-	var folder = deviceFolder(); // the packaged core's - the same resolution the download used
-	if (folder) outlet(0, "device_folder", folder);
-	else post("strudel: no device folder yet (unsaved patcher?) - the sample links will be off\n");
-}
-
 /*
- * NO reveal_folder HERE ANY MORE - "Show folder" became "Copy folder path".
+ * NEITHER sendFolder() NOR reveal_folder LIVES HERE ANY MORE.
+ *
+ * `device_folder` is the LIBRARY's now, sent at ui_ready to any device that declares
+ * files.ts - see defineFiles() in @m4l-jweb/surface. The copy this file used to carry
+ * read the same deviceFolder() and sent the same symbol.
+ *
+ * "Show folder" became "Copy folder path" before that.
  *
  * `; max launchbrowser <folder>` was the only way a device could ask for the OS file
  * manager, and two rounds of testing in Live on Windows 11 showed it does not do the
@@ -418,7 +411,6 @@ function onUiReady(): void {
 	outlet(0, "mode", STRUDEL_MODE); // the real mode, not the packaged default
 	if (!IS_STRUDEL && !IS_SYNTH) sendScale(); // the observers fired before this page existed
 	sendQuant(); // ...same: the page cannot have heard the first one
-	sendFolder();
 	// The observers fired before this page existed, and "no change" would leave the
 	// page's Play parameter guessing - so this one is forced.
 	sendFollow(true);

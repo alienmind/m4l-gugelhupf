@@ -17,12 +17,13 @@
  * What is left is genuinely this device's own: Live's global scale, which the
  * browser shows so a pitched sample map can be read in the key of the set.
  */
-import { CHAIN_IN, CHAIN_OUT, DEVICE_IN } from "@m4l-jweb/bridge";
+import { CHAIN_IN, CHAIN_OUT, DEVICE_IN, FILES_IN } from "@m4l-jweb/bridge";
 
 /** Device -> UI. */
 export const IN = {
 	...DEVICE_IN,
 	...CHAIN_IN,
+	...FILES_IN,
 	/**
 	 * wrapper -> UI: Live's global clip-trigger quantization, as an ENUM INDEX
 	 * (4 = 1 Bar, 0 = None). A preview launches on the grid the user already chose
@@ -30,14 +31,6 @@ export const IN = {
 	 * duration, and reading it as one makes the shortest setting the longest wait.
 	 */
 	quantization: "quantization",
-	/**
-	 * wrapper -> UI: the ABSOLUTE path of the device's folder, as one symbol.
-	 *
-	 * The downloads themselves are relative to it - that is what Max resolves, and
-	 * what survives the spaces in "Ableton Library". This is for the USER: it is what
-	 * a `file://` link needs to be draggable into a Simpler or findable in Places.
-	 */
-	device_folder: "device_folder",
 } as const;
 
 /** There is no `scale` here any more. Live's scale reached this device, was shown in

@@ -7,7 +7,8 @@
  * `buffer_load` / `voice_play` exchange with a Max-side [poly~] is gone, and with it
  * the samples folder - nothing is DOWNLOADED here any more. What still needs the
  * wrapper is `device_folder`: Export writes a WAV next to the device, and only Max
- * knows where that is.
+ * knows where that is. That one is the library's, spread in from FILES_IN - it comes
+ * with the files.ts declaration, not from anything typed here.
  *
  * What else crosses the bridge is MIDI in:
  *
@@ -15,16 +16,13 @@
  *
  * The app calls that helper by name; it never types the selector.
  */
-import { CHAIN_IN, CHAIN_OUT, DEVICE_IN } from "@m4l-jweb/bridge";
+import { CHAIN_IN, CHAIN_OUT, DEVICE_IN, FILES_IN } from "@m4l-jweb/bridge";
 
 /** Device -> UI. */
 export const IN = {
 	...DEVICE_IN,
 	...CHAIN_IN,
-	/** wrapper -> UI: the ABSOLUTE path of the device's folder, as one symbol. Nothing is
-	 *  downloaded here any more, but Export writes a WAV into it - so the user needs a
-	 *  way to reach it. */
-	device_folder: "device_folder",
+	...FILES_IN,
 } as const;
 
 /** UI -> device. */
