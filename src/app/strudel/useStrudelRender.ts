@@ -7,7 +7,7 @@ import {
 	initAudio,
 	getAudioContext,
 } from "superdough";
-import { bindInlet, copyMessage, copyPath, saveToFile } from "@m4l-jweb/bridge";
+import { copyMessage, copyPath, onDeviceFolder, saveToFile } from "@m4l-jweb/bridge";
 
 import { bootScope, compile } from "../../max/shared/engine.mjs";
 import { renderPeriod } from "../../lib/render/determinism";
@@ -160,9 +160,9 @@ export function useStrudelRender(
 		},
 	});
 
-	useEffect(() => {
-		bindInlet("device_folder", (path) => setFolder(String(path)));
-	}, []);
+	// The library's, from this device's files.ts declaration - it arrives at ui_ready,
+	// whether or not anything has been exported yet.
+	useEffect(() => onDeviceFolder(setFolder), []);
 
 	/** Put the export folder on the clipboard - the honest replacement for a reveal that
 	 *  Max cannot perform (doc/TODO.md item 1). */
