@@ -468,11 +468,14 @@ removes the question instead of answering it. **Window visibility was never a ca
 a window is shut to see the mixer, and the Studio's page sounds with its window closed, so
 the audio would change when a window was dragged.
 
-**What it cost, deliberately:** a `scope()` typed in the device view can no longer draw
-anything. It only ever worked because that page had an engine of its own, and `[jweb~]`
-has no signal inlet, so the device page cannot see the Studio's audio at all - the
-Visualizer's `[peakamp~]` tap is what remains. There is also no fallback engine: if the
-Studio's page fails to boot, the device is silent.
+**What it cost is narrower than it sounds.** `scope()` still works - it draws on the
+STUDIO's canvas, which is where the pattern is evaluated, so it now visualises the music
+rather than a separate scratchpad. What is gone is a `scope()` rendering inside the device
+view's own 169 px panel: that needed an engine on that page, and it could only ever have
+shown that page's own sound, because `[jweb~]` has no signal inlet and the device page
+therefore cannot see the Studio's audio at all. The Visualizer's `[peakamp~]` tap is what
+the device view has, and it is enough for "is this playing". The real cost is that there
+is no fallback engine: if the Studio's page fails to boot, the device is silent.
 
 **Run cannot ride `play`.** It is a Live PARAMETER, so setting it to a value it already
 holds sends nothing - and pressing Run after an edit, while the pattern plays, is exactly
@@ -487,7 +490,7 @@ EXPORT still renders in the DEVICE PAGE, offline, and never disturbs the music -
 Studio is a different Chromium context with its own superdough singletons. It is the same
 pattern TEXT, but compiled in this page's scope, so a pattern leaning on something only
 the Studio's runtime provides bounces differently. Fixing that means a renderer in strudel
-itself: doc/TODO.md items 3 and 3d.
+itself: doc/TODO.md items 2 and 2d.
 
 `src/app/strudel/repl-shim/m4l-shim.js` is the only line of ours inside that app: it
 arms the audio (the REPL waits for a `mousedown` that a hidden window never gets),

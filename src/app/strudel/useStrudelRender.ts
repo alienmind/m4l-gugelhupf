@@ -134,7 +134,7 @@ export function useStrudelRender(
 	 * is invisible to the audio on the track. What it cannot do is bounce what the Studio
 	 * would actually play: this page compiles the same TEXT in its own scope, so a pattern
 	 * leaning on something only the Studio's runtime provides renders differently or not at
-	 * all. The fix is a renderer in strudel itself - doc/TODO.md item 3.
+	 * all. The fix is a renderer in strudel itself - doc/TODO.md item 2.
 	 */
 	const exportAudio = useCallback(async () => {
 		if (exporting) return;
