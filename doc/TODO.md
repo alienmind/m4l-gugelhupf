@@ -34,33 +34,32 @@ as `copyPath()` in `@m4l-jweb/bridge`.
 
 ### 1. TEST - one transport, one engine, and the Studio saving again
 
-The Strudel device has two engines that both sound into the same track, and one `play`
-parameter used to start both, so the track carried the sum of the Studio's pattern and
-the device page's scratchpad. It is XOR now, and the owner is whoever STARTED LAST: Run
-in the device view claims the track for the scratchpad, evaluating in the Studio claims
-it back, and the choice is a saved slot (`engine`). The loser stands down - quiet,
-without clearing `play`, which belongs to whichever engine is sounding. ARCHITECTURE
-section 4k carries the two predicates that were tried in Live first and rejected.
+**The device page's engine is gone.** It ran its own Strudel on its own slot while the
+Studio ran the real one, both summing into the same track off one `play` parameter. Three
+answers to "which one does the transport drive" are in
+[DRAWER_OF_FAILED_IDEAS.md](DRAWER_OF_FAILED_IDEAS.md); what ships is one engine. The
+device view edits the same `code` slot, shows the same pattern, makes no sound, and its
+Run sends `evaluate` to the Studio. A `scope()` typed there no longer draws - accepted,
+and not coming back.
 
 **A second bug fell out of the same Live session, and it was the bigger one.** The shim
 did not speak the state slot's `{"__value": ...}` envelope, so it ignored every slot it
 was sent, never marked itself restored, and therefore NEVER WROTE THE STUDIO'S PATTERN
-BACK. The `code` slot had been frozen at its default - the Studio has not been saving
-with the set. Fixed and pinned by `src/app/strudel/__tests__/repl-shim.test.ts`.
+BACK. The `code` slot had been frozen at its default - the Studio was not saving with the
+set. Fixed and pinned by `src/app/strudel/__tests__/repl-shim.test.ts`.
 
 **The exact next test**, on `alienmind-gugelhupf`, in this order:
 
-1. Type a pattern in the Studio, save the set, reopen it - the pattern comes back (this
-   is the save regression, and it has to pass before anything else means much).
-2. Evaluate in the Studio - it sounds. Press Run in the device view with a pattern in the
-   scratchpad - the Studio stops and the scratchpad sounds, with the Studio's pattern
-   still in it.
-3. Evaluate in the Studio again - the scratchpad goes quiet and the Studio plays.
-4. Save on the scratchpad, reopen - Run plays the scratchpad, not the Studio.
+1. Type a pattern in the Studio, save the set, reopen it - the pattern comes back (the
+   save regression, and it has to pass before anything else means much).
+2. The same text is in the device view's code view, and typing in either shows up in the
+   other.
+3. Run in the device view - the Studio plays it. Edit, press Run again - it re-evaluates
+   while playing.
+4. Only one voice, ever - no doubled pattern, whatever is typed where.
 
-A page's `console.log` does NOT reach the Max console, so read the `sync_state engine`
-and `sync_state code` lines the wrapper posts instead - they are what say whether a claim
-or a save happened at all.
+A page's `console.log` does NOT reach the Max console, so read the `sync_state code`
+lines the wrapper posts instead - they are what say whether the save happened at all.
 
 ### 2. FEAT - Export straight into a Live clip
 
@@ -96,10 +95,10 @@ rendered at, so the clip can be right rather than warped by guess.
 **Keep the copy-path button.** Live 12.0.4 and older have no such call, and the path is
 still the honest answer there.
 
-**What it bounces is settled: THIS PAGE's pattern, the scratchpad's.** The Studio's is
-not bounced, because it compiles in the Studio's own runtime and cannot be re-created
-faithfully in the device page's scope. Item 3 is the route to bouncing the Studio, and
-it goes through strudel itself rather than through this repo.
+**What it bounces:** the right TEXT, in the wrong SCOPE. There is one pattern now, so
+Export renders what the Studio is playing - but it compiles it in the device page rather
+than in the Studio's runtime, so anything leaning on what only that runtime provides
+renders differently. Item 3 is the route to rendering it where it actually runs.
 
 ### 3. FEAT (upstream strudel) - render the pattern to a WAV, from strudel.cc itself
 
@@ -107,7 +106,7 @@ it goes through strudel itself rather than through this repo.
 pattern to audio; the renderer this repo carries (`src/lib/render/offline.ts`,
 `determinism.ts`, `wav.ts`) is general and belongs upstream. Done there, the Studio can
 bounce its own pattern with nothing of ours in the payload, and `alienmind-gugelhupf`
-stops being able to export only the scratchpad.
+stops rendering its pattern in a scope that is not the one playing it.
 
 **Hard constraint: no dependency on anything outside strudel, in either direction.**
 The commits must be mergeable upstream on their own merits, and this repo must keep

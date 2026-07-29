@@ -68,12 +68,12 @@ export function useSliderKnobs(
 	/**
 	 * Whether this page is the one that NAMES the dials.
 	 *
-	 * The Strudel device has two engines against one pool - this page's scratchpad and
-	 * the Studio window's pattern - and both used to describe it, so a dial the Studio
-	 * had named `lpf` was renamed `slider 1` (or reset to `S1`) by whichever page
-	 * re-rendered last. The Studio owns the pattern, so the Studio owns the names; the
-	 * scratchpad only claims them when the Studio has declared nothing. Devices with a
-	 * single page leave this alone.
+	 * The Strudel device has two PAGES against one pool - the device view and the Studio
+	 * window - and both used to describe it, so a dial the Studio had named `lpf` was
+	 * renamed `slider 1` (or reset to `S1`) by whichever page re-rendered last. The
+	 * Studio runs the pattern, so the Studio owns the names; the device view claims them
+	 * only when the Studio has declared nothing. Devices with a single page leave this
+	 * alone.
 	 */
 	describe = true,
 ): SliderKnob[] {

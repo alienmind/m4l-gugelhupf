@@ -76,8 +76,9 @@ want a dial without declaring a slider.
 
 - **Not Yet MIDI Aware:** this device does not currently process inbound MIDI notes from
   Ableton (see doc/TODO.md).
-- **Export bounces the device view's scratchpad**, not the Studio's pattern - the two run
-  separate engines. Being resolved; see doc/TODO.md.
+- **Export renders the pattern in the DEVICE PAGE's scope**, not in the Studio's runtime.
+  It is the same pattern text, but a pattern leaning on something only the Studio provides
+  bounces differently, or not at all. Being resolved; see doc/TODO.md.
 
 ---
 

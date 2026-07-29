@@ -559,46 +559,32 @@
 		/* ------------------------------------------------------------ *
 		 * 4. Transport and knobs, forwarded by the device view.
 		 * ------------------------------------------------------------ */
-		/* ------------------------------------------------------------ *
-		 * THE TRANSPORT IS SHARED WITH THE DEVICE PAGE'S OWN ENGINE, and only one of
-		 * them may sound - the two would otherwise sum into the same track. The `engine`
-		 * slot says which, and it is CLAIMED BY WHOEVER STARTS: evaluating here takes
-		 * the track back from the device view's scratchpad.
-		 *
-		 * `editor.evaluate` is wrapped rather than hooked, because the REPL evaluates
-		 * from several places - its own play button, Ctrl+Enter, the pattern browser -
-		 * and all of them mean the same thing. An evaluation WE caused (Live's transport
-		 * arriving as set_play) claims nothing: the owner is already whoever the device
-		 * page says it is, and re-claiming from inside a forwarded press would make the
-		 * Studio steal the transport every time Live started.
-		 * ------------------------------------------------------------ */
-		var forwarding = false;
-
-		function claimTransport() {
-			try {
-				max.outlet("sync_state", "engine", encodeSlot("studio"));
-			} catch (e) {
-				console.warn(TAG, "could not claim the transport:", e && e.message);
-			}
-		}
-
-		if (typeof editor.evaluate === "function") {
-			var evaluate = editor.evaluate.bind(editor);
-			editor.evaluate = function () {
-				if (!forwarding) claimTransport();
-				return evaluate.apply(null, arguments);
-			};
-		}
-
 		max.bindInlet("set_play", function (v) {
-			forwarding = true;
 			try {
 				if (Number(v)) editor.evaluate();
 				else editor.stop();
 			} catch (e) {
 				console.warn(TAG, "transport failed:", e && e.message);
-			} finally {
-				forwarding = false;
+			}
+		});
+
+		/**
+		 * RE-EVALUATE, from the device view's Run.
+		 *
+		 * This page is the device's only engine: the device view edits the same `code`
+		 * slot and makes no sound, so its Run has to mean "evaluate here". It cannot
+		 * ride `set_play`, which is a Live PARAMETER and therefore sends nothing when it
+		 * is already on - and pressing Run after an edit, while the pattern plays, is
+		 * exactly when a re-evaluation is wanted.
+		 *
+		 * The edit itself arrives first: the device page wrote the slot on the keystroke
+		 * before, and both messages leave that page in order.
+		 */
+		max.bindInlet("evaluate", function () {
+			try {
+				editor.evaluate();
+			} catch (e) {
+				console.warn(TAG, "evaluate failed:", e && e.message);
 			}
 		});
 

@@ -98,10 +98,9 @@ export default [
 		// Export is declared in src/app/strudel/files.ts, and [maxurl] comes from there.
 		chains: ["webaudio"],
 		// The device page's own ring buffer, the same 66 ms the Studio window asks for
-		// (src/app/strudel/surface.ts). The window got it in 1.1.0 and the page did not,
-		// so the device view's scratchpad engine chopped while the Studio played clean -
-		// one setting that only ever reached one of the two pages. The object default
-		// (~21 ms at 48 kHz) underruns within ~30 s on a sustained tone.
+		// (src/app/strudel/surface.ts). The page makes no sound of its own any more, but
+		// its `[jweb~]` is still summed into the track, and the object default (~21 ms at
+		// 48 kHz) underruns within ~30 s.
 		latency: 66,
 		unmatchedTo: "js",
 	},

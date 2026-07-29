@@ -22,16 +22,7 @@ const KNOB_IDS = ["s1", "s2", "s3", "s4", "s5", "s6", "s7", "s8"] as const;
  * The receiving end is `repl-shim/m4l-shim.js`, which turns `set_play` into
  * evaluate/stop and keeps `set_s1..s8` for the pattern to read as `m4lKnob(n)`.
  */
-export function useReplRemote(
-	/**
-	 * Whether the Studio is the engine Live's transport drives. When it is not, the
-	 * device's scratchpad is, and the Studio is held at stop - the two never sound
-	 * together (app/strudel/transport.ts). The dials keep arriving either way: a knob
-	 * is a control, not a transport, and a Studio pattern that is not playing yet
-	 * should already be holding the values it will start with.
-	 */
-	transport = true,
-): void {
+export function useReplRemote(): void {
 	const [play] = useParam(surface, "play");
 	/* eslint-disable react-hooks/rules-of-hooks */
 	const knobs = KNOB_IDS.map((id) => useParam(surface, id)[0]);
@@ -47,22 +38,9 @@ export function useReplRemote(
 		sendToWindow("repl", selector, value);
 	};
 
-	/** May a `play` that is already down start the Studio? Same latch, and the same
-	 *  reason, as the device engine's - see useStrudelEngine. */
-	const armed = useRef(true);
-
 	useEffect(() => {
-		if (!transport) {
-			armed.current = false;
-			send("set_play", 0);
-			return;
-		}
-		if (!armed.current) {
-			if (play) return;
-			armed.current = true;
-		}
 		send("set_play", play ? 1 : 0);
-	}, [transport, play]);
+	}, [play]);
 
 	useEffect(() => {
 		knobs.forEach((value, i) => send(`set_${KNOB_IDS[i]}`, typeof value === "number" ? value : 0));
@@ -70,8 +48,6 @@ export function useReplRemote(
 
 	useEffect(() => {
 		const t = setTimeout(() => {
-			// Whatever the latch above last decided - NOT the mount value, which was
-			// decided before the Studio's own pattern had come back from the set.
 			send("set_play", sent.current["set_play"] ?? 0, true);
 			knobs.forEach((value, i) => send(`set_${KNOB_IDS[i]}`, typeof value === "number" ? value : 0, true));
 		}, 3000);
