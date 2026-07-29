@@ -46,11 +46,47 @@ save path now, so it cannot recur.
 was poisoned before this fix the stray is still there - `[js]` cannot delete it, so it
 has to go by hand, and the wrapper now posts a line saying so on a failed place.
 
-**Still unresolved, and unrelated: WHOSE pattern Export bounces.** It renders the
-scratchpad's, because that is the engine the device page has, and the music now lives in
-the Studio. Either it moves behind the shim (the Studio renders and saves) or it is cut.
+**Still unresolved, and unrelated: WHOSE pattern Export bounces.** Confirmed in Live: it
+renders the SCRATCHPAD's, because that is the engine the device page has, while the music
+lives in the Studio. Either it moves behind the shim (the Studio renders and saves) or it
+is cut. Decide before item 2 is built - a bounce that lands in a clip is worse than
+useless if it is a bounce of the wrong pattern.
 
-### 2. TEST - the sample browser saves flat now
+### 2. FEAT - Export straight into a Live clip
+
+**The workaround can go.** Export writes a WAV and hands the user a path to paste into
+Explorer and drag back in, because it was believed Live had no scripted way to make an
+audio clip. That was wrong: `ClipSlot.create_audio_clip(<absolute path>)` puts a WAV in a
+Session slot and `Track.create_audio_clip(<path>, <position>)` puts one in the
+Arrangement, from Live 12.0.5 onward. See
+[DRAWER_OF_FAILED_IDEAS.md](DRAWER_OF_FAILED_IDEAS.md) for how the wrong premise got
+recorded, and m4l-jweb's TODO item 1 for the library half - **this repo cannot start
+until that lands**, because the call belongs in the wrapper, not here.
+
+**The design problem is WHERE the clip goes.** Both calls print an error unless the
+target is an audio track that is not frozen and not recording - and every device here
+that can Export (`alienmind-gugelhupf`, `alienmind-gugelhupf-drums-sampler`) is an
+INSTRUMENT, so it sits on a MIDI track and can never write into its own. Three options,
+and this needs a decision before code:
+
+| Where | Behaviour | Cost |
+|---|---|---|
+| The highlighted slot | Bounce lands where the cursor is | Fails unless the user selected an audio track first - has to be explained, and `has_audio_input` checked before calling |
+| A new audio track | `create_audio_track(-1)`, then its first slot | Always works, never asks - but a device that spawns tracks is a device that surprises people |
+| Remembered target | Ask once, keep the track index in a state slot | Best behaviour, most to build, and a track index goes stale when tracks move |
+
+Lean towards the highlighted slot with a clear message when it is not an audio track, and
+a "bounce to a new track" as the explicit second button rather than a silent fallback.
+
+**Set the clip up after creating it**, using what the render already knows: `name` (the
+pattern, not `gugelhupf-export-1785343077706`), `warping` on with `warp_mode`, and the
+loop points from the exact cycle count that was rendered. The device knows the cps it
+rendered at, so the clip can be right rather than warped by guess.
+
+**Keep the copy-path button.** Live 12.0.4 and older have no such call, and the path is
+still the honest answer there.
+
+### 3. TEST - the sample browser saves flat now
 
 The browser's downloads were failing, and `localPath()` now returns
 `<pack>_<name>_<n>.wav`, flat in the device folder, with the copy button offering that
@@ -69,7 +105,7 @@ not a redesign.
 and check that `<pack>_<name>_0.wav` sits next to the .amxd. Then drag that row into a
 Live track.
 
-### 3. TEST - the path on the clipboard, still unwatched
+### 4. TEST - the path on the clipboard, still unwatched
 
 Never verified end to end. It was blocked on item 1 - the copy button only appeared once
 something had been written, so a device whose Export failed could never be used to test
@@ -92,7 +128,7 @@ receive Ctrl+C inside jweb either, then a device page cannot reach the system cl
 at all and the answer is a Max-side one, or none. History of what does not work:
 [DRAWER_OF_FAILED_IDEAS.md](DRAWER_OF_FAILED_IDEAS.md).
 
-### 4. FEAT - native MIDI input (`midiIn`/`kb()`) and MIDI output
+### 5. FEAT - native MIDI input (`midiIn`/`kb()`) and MIDI output
 
 Wanted in the device view's SCRATCHPAD as much as in the main pattern: the point of a
 second instance is control code, and `midiin` is not on this device's chain list yet.
@@ -118,7 +154,7 @@ devices. What is missing is (in) feeding live notes into the pattern scope and
 
   NOTE: For this one, I would need examples on how to use (concrete strudel patterns) for midi routing from within the device
 
-### 5. FEAT - orbit() support (multichannel out)
+### 6. FEAT - orbit() support (multichannel out)
 
 **Assessment.** Valid, UNVERIFIED at its foundation. superdough can already render
 orbits to separate channel pairs (`initAudio({ multiChannelOrbits: true })` exists),
@@ -136,7 +172,7 @@ build emits jweb~ with 2N channels and the `webaudio` chain fans pairs to
 `duck()` then works inside superdough with no Max help at all (it is orbit-level
 DSP in the page). If the spike fails: park in the drawer with the finding.
 
-### 6. FEAT - cross-device coordination in the Rack
+### 7. FEAT - cross-device coordination in the Rack
 
 **Assessment.** Valid, big, and last for a reason: it depends on nothing above but
 informs its value. Two separable halves that the original text mixed: (a) a
@@ -155,7 +191,7 @@ device consumes them exactly like its app's own `set_<id>` writes (the fan-in
 already exists in `fanParamInto`). A Rack the user builds maps its 16 macros
 across both devices' dials. Explicitly out of scope: any cross-TRACK routing.
 
-### 7. TEST - verify offline behavior in Live
+### 8. TEST - verify offline behavior in Live
 
 **Assessment.** Partly done. The persistent page-side cache shipped in 1.0.0 and was
 verified in Live: a sample played once online still plays after a restart with the
