@@ -47,10 +47,19 @@ whether or not it is showing, so keying on visibility would mean the audio chang
 a window was dragged. `wind.visible` is readable in the wrapper (it already polls it in
 `fitWindowPage`) if this ever needs revisiting.
 
+**A handover does not inherit the press**, which the first build got wrong and Live
+caught: `play` is still down when ownership moves, so the scratchpad started on the
+empty pattern it held at that instant, went `live` on silence, and could not be started
+again (typing does not re-evaluate). Both sides latch now, and `run()` refuses an empty
+pattern. ARCHITECTURE section 4k has it.
+
 **The exact next test:** on `alienmind-gugelhupf`, press Run with the Studio's default
-pattern in it - only the Studio sounds. Clear the Studio, type a pattern in the device
-view's scratchpad, press Run - only the scratchpad sounds. Type into the Studio again
-while the scratchpad plays - the scratchpad goes quiet within a second.
+pattern in it - only the Studio sounds. Clear the Studio (the sound stops), type a
+pattern in the device view's scratchpad, press Run - only the scratchpad sounds. Type
+into the Studio again while the scratchpad plays - the scratchpad goes quiet within a
+second, and Run then starts the Studio. The device page posts `[transport] studio has
+it` / `[transport] scratchpad has it` on every handover, so the Max console says whether
+a failure is a handover that did not happen or an engine that did not start.
 
 ### 2. FEAT - Export straight into a Live clip
 

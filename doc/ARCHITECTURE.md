@@ -458,6 +458,18 @@ ENGINE DOWN, going quiet without writing `play`, since clearing it would stop th
 that legitimately has it. Ownership is re-evaluated as the Studio's slot changes, so
 typing into an empty Studio silences a playing scratchpad within the slot's poll.
 
+**A HANDOVER DOES NOT INHERIT THE PRESS**, and the first build of this got it wrong.
+`play` is still down when ownership moves - that is the normal case, since the moment
+worth handing over at is mid-performance - so the engine taking the transport started
+immediately, on whatever it was holding. For the scratchpad taking over from an emptied
+Studio that is NOTHING: the pattern is typed afterwards, and no keystroke re-evaluates
+(Run does), so it was an engine that believed it was playing silence and could not be
+started, only stopped and started again. Both sides now latch: an engine that gains the
+transport waits for `play` to be released and pressed again, while an engine holding it
+at mount still starts, so a set saved playing comes back playing. `run()` also refuses
+an empty pattern rather than going `live` on silence, which is what made the state
+unrecoverable rather than merely wrong.
+
 The predicate is the Studio's PATTERN, not its window. A window is closed to see the
 mixer and reopened a minute later, and the Studio's page sounds with its window shut, so
 visibility would mean the audio changed when a window was dragged. `wind.visible` is

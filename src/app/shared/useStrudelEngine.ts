@@ -592,6 +592,13 @@ export function useStrudelEngine(opts: EngineOptions): EngineState {
 			setPlayParam(true);
 			return;
 		}
+		// An empty pattern must not go LIVE. It makes no sound, and `live` is what the
+		// transport effect and the Run button read - a silent engine that believes it is
+		// playing cannot be started, only stopped and started again.
+		if (!text.trim()) {
+			setStatus("Nothing to run - the pattern is empty");
+			return;
+		}
 		if (sink === "voice" || !isBareMini(text) || errors.length === 0) {
 			workerRef.current?.postMessage({ t: "code", code: text, ctx: noteCtx, liveScale, sink });
 			setLive(true);
@@ -633,14 +640,35 @@ export function useStrudelEngine(opts: EngineOptions): EngineState {
 		setPlayParam(false);
 	}, [standDown, setPlayParam]);
 
+	/**
+	 * May a `play` that is ALREADY DOWN start this engine?
+	 *
+	 * True at mount, so a set saved while playing comes back playing. False from the
+	 * moment this engine loses the transport, and true again only once `play` has been
+	 * released - so an engine that gains the transport mid-press waits for the next
+	 * press instead of inheriting the one the other engine was started by.
+	 */
+	const armed = useRef(true);
+
 	useEffect(() => {
 		// Ownership can flip while this engine is sounding - the Studio's pattern is
 		// typed into an empty slot, or cleared out of a full one - so silence it here
 		// rather than only at the next transport change.
 		if (!transport) {
+			armed.current = false;
 			if (live) standDown();
 			return;
 		}
+		// INHERITING THE PRESS IS THE BUG THIS PREVENTS. The scratchpad takes over from
+		// an emptied Studio while `play` is still on, so it would start on whatever it
+		// holds at that instant - nothing, since the pattern is typed afterwards. It
+		// would then be an engine that believes it is playing silence, and no keystroke
+		// re-evaluates (that is what Run is for), so nothing could be heard again.
+		if (!armed.current) {
+			if (playParam) return;
+			armed.current = true;
+		}
+
 		if (playParam && !live) run();
 		else if (!playParam && live) hush();
 	}, [transport, playParam, live, run, hush, standDown]);

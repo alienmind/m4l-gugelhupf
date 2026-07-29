@@ -20,11 +20,13 @@ import { Button } from "./Button";
  */
 
 /** Run / Stop the pattern. The one toggle in the set that lifts when it is ON. */
-export function RunButton({ live, onRun, onStop, className }: {
+export function RunButton({ live, onRun, onStop, className, title }: {
 	live: boolean;
 	onRun: () => void;
 	onStop: () => void;
 	className?: string;
+	/** Overridden where the button drives an engine other than this page's own. */
+	title?: string;
 }) {
 	return (
 		<Button
@@ -33,9 +35,10 @@ export function RunButton({ live, onRun, onStop, className }: {
 			active={live}
 			onClick={live ? onStop : onRun}
 			title={
-				live
+				title ??
+				(live
 					? "Stop the running pattern"
-					: "Evaluate and run this pattern, locked to Live's transport (Ctrl+Enter)"
+					: "Evaluate and run this pattern, locked to Live's transport (Ctrl+Enter)")
 			}
 		/>
 	);
