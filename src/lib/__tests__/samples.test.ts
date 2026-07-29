@@ -163,16 +163,25 @@ describe("where a sample lands", () => {
 
 	it("is a RELATIVE path - the wrapper is the only thing that may resolve it", () => {
 		const p = localPath(sound, 0, "github:tidalcycles/dirt-samples");
-		expect(p.startsWith("samples/")).toBe(true);
-		expect(p).toBe("samples/github_tidalcycles_dirt-samples/bd_0.wav");
+		expect(p.startsWith("/")).toBe(false);
+		expect(p).toBe("github_tidalcycles_dirt-samples_bd_0.wav");
+	});
+
+	// Not a style choice. A save whose destination has a separator in it fails the
+	// atomic place with `-1 bytes` - [js]'s File and [maxurl] disagree about where a
+	// subdirectory is - so every download went missing while this returned `samples/...`.
+	it("is FLAT - a subdirectory never survives the place step", () => {
+		for (const n of [0, 1, 2]) {
+			expect(localPath(sound, n, "github:x/y")).not.toContain("/");
+		}
 	});
 
 	it("carries the source file's extension over", () => {
-		expect(localPath(sound, 1, "github:x/y")).toBe("samples/github_x_y/bd_1.aiff");
+		expect(localPath(sound, 1, "github:x/y")).toBe("github_x_y_bd_1.aiff");
 	});
 
 	it("wraps the variation index, as `bd:3` does", () => {
 		expect(variationUrl(sound, 2)).toBe("https://x/a.wav");
-		expect(localPath(sound, 2, "github:x/y")).toBe("samples/github_x_y/bd_0.wav");
+		expect(localPath(sound, 2, "github:x/y")).toBe("github_x_y_bd_0.wav");
 	});
 });

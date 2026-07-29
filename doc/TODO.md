@@ -63,24 +63,23 @@ that is the engine the device page has, and the music now lives in the Studio. E
 moves behind the shim (the Studio renders and saves) or it is cut. Decide before it is
 fixed - there is no point fixing a bounce of the wrong thing.
 
-### 2. FIXME - does the sample browser's save reach a subdirectory at all?
+### 2. TEST - the sample browser saves flat now
 
-**Unverified, and found by reading rather than by a failure report.** `localPath()`
-(`src/lib/samples.ts`) writes to `samples/<pack>/<name>_<n>.wav`, two levels down. The
-drawer records the opposite as measured fact:
+The subdirectory question is answered: `alienmind-gugelhupf-sample-browser` reported
+`Saved nothing: could not place save: -1 bytes`, which is the drawer's entry exactly -
+`[js]`'s `File` and `[maxurl]` resolve a subdirectory differently, so the place finds
+nothing. Every download had been failing at that last step for as long as `localPath()`
+returned `samples/<pack>/...`, and the `.part` was written and size-checked first, which
+is why the failure looked like a save that nearly worked.
 
-> **`saveToFile` to a SUBDIRECTORY fails the atomic place with `-1 bytes`.** Max's `[js]`
-> `File` and `[maxurl]` (libcurl) resolve `render/x.wav` differently.
+`localPath()` now returns `<pack>_<name>_<n>.wav`, flat in the device folder, and the
+copy button offers the device folder itself. **The paths users drag from have changed** -
+anything already dragged into a set from `samples/` still points at a file that is not
+there, and there was never a working save to break.
 
-Both cannot be true. Either the browser's downloads have been failing at the place step
-(and the row's "Saved nothing" is the symptom nobody has reported), or the drawer entry
-is narrower than it reads. It is the SAME `-1` as item 1, from the same code path, so
-the two are probably one question.
-
-**The exact next test:** audition one sound in `alienmind-gugelhupf-sample-browser`,
-then check whether `samples/<pack>/` next to the .amxd holds the file or a `.part`, and
-capture the Max console. Nothing has been changed on a guess - the destination is still
-`samples/...`, because moving it flat would change the paths users drag from.
+**The exact next test:** audition a sound, confirm the row does not say "Saved nothing",
+and check that `<pack>_<name>_0.wav` sits next to the .amxd rather than a `.part`. Then
+drag that row into a Live track.
 
 ### 3. TEST - the path on the clipboard, still unwatched
 
@@ -88,9 +87,9 @@ Never verified end to end. It was blocked on item 1 - the copy button only appea
 something had been written, so a device whose Export failed could never be used to test
 the copy. **That coupling is gone**: `device_folder` arrives at `ui_ready` from the
 library's `defineFiles()` plumbing, and the button on `alienmind-gugelhupf` and
-`alienmind-gugelhupf-drums-sampler` follows the folder rather than the export. (The
-sample browser's still waits for a download, and correctly: it offers `samples/`, which
-does not exist until something lands in it.)
+`alienmind-gugelhupf-drums-sampler` follows the folder rather than the export. The
+sample browser's does too now that it saves flat - it offers the device folder, which
+exists before anything lands in it.
 
 What is known: `document.execCommand("copy")` **returns true in a device page and copies
 nothing**, and the page cannot detect it - `navigator.clipboard.readText()` needs a
