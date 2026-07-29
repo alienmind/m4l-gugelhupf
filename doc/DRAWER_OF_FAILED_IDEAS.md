@@ -595,9 +595,10 @@ was deleted:
   500 ms poll in `fitWindowPage`.
 
 **What shipped is one engine.** The device page's was deleted and the device view now
-edits the same `code` slot the Studio does. A `scope()` in the device view went with it
-and is not coming back: `[jweb~]` has no signal inlet, so that page cannot see the
-Studio's audio.
+edits the same `code` slot the Studio does. `scope()` was expected to be the casualty and
+is not: it draws on the Studio's canvas, where the pattern runs, so it visualises the
+music now instead of a scratchpad. What cannot exist is a scope inside the DEVICE VIEW -
+`[jweb~]` has no signal inlet, so that page could only ever have scoped its own sound.
 
 **The bug underneath all of it.** The shim did not speak the state slot's
 `{"__value": ...}` envelope, so it discarded every slot it was sent, never marked itself

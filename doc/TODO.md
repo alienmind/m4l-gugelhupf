@@ -17,8 +17,8 @@ more; what follows is what 1.3 has to answer.
 
 ## Waiting on the library
 
-Two things, both named in the items below: `createAudioClip()` (item 2) and a save that
-a WINDOW page can make (item 3d) - the Studio cannot write a file today, so it cannot
+Two things, both named in the items below: `createAudioClip()` (item 1) and a save that
+a WINDOW page can make (item 2d) - the Studio cannot write a file today, so it cannot
 bounce its own pattern even once strudel can render one.
 
 `defineFiles()` shipped upstream and this repo consumes it:
@@ -32,36 +32,7 @@ as `copyPath()` in `@m4l-jweb/bridge`.
 
 ## Open Tasks
 
-### 1. TEST - one transport, one engine, and the Studio saving again
-
-**The device page's engine is gone.** It ran its own Strudel on its own slot while the
-Studio ran the real one, both summing into the same track off one `play` parameter. Three
-answers to "which one does the transport drive" are in
-[DRAWER_OF_FAILED_IDEAS.md](DRAWER_OF_FAILED_IDEAS.md); what ships is one engine. The
-device view edits the same `code` slot, shows the same pattern, makes no sound, and its
-Run sends `evaluate` to the Studio. A `scope()` typed there no longer draws - accepted,
-and not coming back.
-
-**A second bug fell out of the same Live session, and it was the bigger one.** The shim
-did not speak the state slot's `{"__value": ...}` envelope, so it ignored every slot it
-was sent, never marked itself restored, and therefore NEVER WROTE THE STUDIO'S PATTERN
-BACK. The `code` slot had been frozen at its default - the Studio was not saving with the
-set. Fixed and pinned by `src/app/strudel/__tests__/repl-shim.test.ts`.
-
-**The exact next test**, on `alienmind-gugelhupf`, in this order:
-
-1. Type a pattern in the Studio, save the set, reopen it - the pattern comes back (the
-   save regression, and it has to pass before anything else means much).
-2. The same text is in the device view's code view, and typing in either shows up in the
-   other.
-3. Run in the device view - the Studio plays it. Edit, press Run again - it re-evaluates
-   while playing.
-4. Only one voice, ever - no doubled pattern, whatever is typed where.
-
-A page's `console.log` does NOT reach the Max console, so read the `sync_state code`
-lines the wrapper posts instead - they are what say whether the save happened at all.
-
-### 2. FEAT - Export straight into a Live clip
+### 1. FEAT - Export straight into a Live clip
 
 **The workaround can go.** Export writes a WAV and hands the user a path to paste into
 Explorer and drag back in, because it was believed Live had no scripted way to make an
@@ -98,9 +69,9 @@ still the honest answer there.
 **What it bounces:** the right TEXT, in the wrong SCOPE. There is one pattern now, so
 Export renders what the Studio is playing - but it compiles it in the device page rather
 than in the Studio's runtime, so anything leaning on what only that runtime provides
-renders differently. Item 3 is the route to rendering it where it actually runs.
+renders differently. Item 2 is the route to rendering it where it actually runs.
 
-### 3. FEAT (upstream strudel) - render the pattern to a WAV, from strudel.cc itself
+### 2. FEAT (upstream strudel) - render the pattern to a WAV, from strudel.cc itself
 
 **The goal is a strudel feature, not an m4l one.** Strudel has no way to render a
 pattern to audio; the renderer this repo carries (`src/lib/render/offline.ts`,
@@ -113,7 +84,7 @@ The commits must be mergeable upstream on their own merits, and this repo must k
 building against STOCK strudel - the shim asks for what may not be there and fails soft,
 exactly as it already does for `slider()` metadata.
 
-#### 3a. The renderer, in `superdough`
+#### 2a. The renderer, in `superdough`
 
 A new `packages/superdough/render.mjs`, which is `src/lib/render/offline.ts` with the
 m4l-shaped edges taken off. Everything it needs is already exported by superdough
@@ -148,7 +119,7 @@ dependency-free as it stands). The loop length comes from `renderPeriod()`
 (`src/lib/render/determinism.ts`) - it queries the pattern at growing cycle counts until
 the haps repeat, capped - so the UI does not have to ask "how many cycles".
 
-#### 3b. The UI, in the website
+#### 2b. The UI, in the website
 
 **Put it in the panel, not next to Play.** A render is the one action in strudel that
 can take seconds and touch the network (unloaded samples), and the transport bar is
@@ -156,7 +127,7 @@ where reflexes live. A `render` tab in `website/src/repl/components/panel/Panel.
 cycles (defaulting to the detected period), sample rate, a Render button, the resulting
 length - can say what it is about to do. Promote it to the main bar later if it earns it.
 
-#### 3c. The seam that lets m4l save the file, with strudel knowing nothing about m4l
+#### 2c. The seam that lets m4l save the file, with strudel knowing nothing about m4l
 
 The website's default delivery is a browser download - `URL.createObjectURL` and an
 `<a download>`. Before doing it, dispatch a CANCELABLE event:
@@ -175,7 +146,7 @@ useful to any embedder. Expose `window.strudelRender(opts)` alongside it so a ho
 START a render too - that is what lets the device view's Export button bounce the
 STUDIO's pattern rather than its own.
 
-#### 3d. What is blocked here until the library moves
+#### 2d. What is blocked here until the library moves
 
 The Studio is a floating window, and **a window page cannot save today**. The wrapper's
 `window()` dispatch passes `ui_ready`/`get_state`/`sync_state`/`param_*` through and
@@ -183,11 +154,11 @@ sends everything else to `onWindowMessage`; worse, `replyWindow` is restored whe
 dispatch returns, while a save's final place step comes back later from `[maxurl]` - so
 a window-originated save would write the file and reply `save_ok` to the DEVICE view.
 The library has to record the origin window on the pending request instead. Until then
-3a-3c stand on their own (they download), and only the m4l wiring waits.
+2a-2c stand on their own (they download), and only the m4l wiring waits.
 
-### 4. FEAT (upstream strudel) - a Sliders pane in the sidebar
+### 3. FEAT (upstream strudel) - a Sliders pane in the sidebar
 
-Same shape as item 3 and the same constraint: it is a strudel feature that this repo
+Same shape as item 2 and the same constraint: it is a strudel feature that this repo
 happens to want. A pattern's `slider()` calls are already gathered here - the shim reads
 `strudelMirror.widgets` after each evaluation and puts the first eight on the device's
 S1..S8 dials - and strudel.cc itself has nowhere to see them but inline in the code.
@@ -209,7 +180,7 @@ does not carry, and this item adds:
   stock submodule. It prefers `w.name` when the transpiler provides it, so it retires
   itself only when the fork is the only thing anyone builds against.
 
-### 5. FEAT - native MIDI input (`midiIn`/`kb()`) and MIDI output
+### 4. FEAT - native MIDI input (`midiIn`/`kb()`) and MIDI output
 
 Wanted in the device view's SCRATCHPAD as much as in the main pattern: the point of a
 second instance is control code, and `midiin` is not on this device's chain list yet.
@@ -235,7 +206,7 @@ devices. What is missing is (in) feeding live notes into the pattern scope and
 
   NOTE: For this one, I would need examples on how to use (concrete strudel patterns) for midi routing from within the device
 
-### 6. FEAT - orbit() support (multichannel out)
+### 5. FEAT - orbit() support (multichannel out)
 
 **Assessment.** Valid, UNVERIFIED at its foundation. superdough can already render
 orbits to separate channel pairs (`initAudio({ multiChannelOrbits: true })` exists),
@@ -253,7 +224,7 @@ build emits jweb~ with 2N channels and the `webaudio` chain fans pairs to
 `duck()` then works inside superdough with no Max help at all (it is orbit-level
 DSP in the page). If the spike fails: park in the drawer with the finding.
 
-### 7. FEAT - cross-device coordination in the Rack
+### 6. FEAT - cross-device coordination in the Rack
 
 **Assessment.** Valid, big, and last for a reason: it depends on nothing above but
 informs its value. Two separable halves that the original text mixed: (a) a
@@ -272,7 +243,7 @@ device consumes them exactly like its app's own `set_<id>` writes (the fan-in
 already exists in `fanParamInto`). A Rack the user builds maps its 16 macros
 across both devices' dials. Explicitly out of scope: any cross-TRACK routing.
 
-### 8. TEST - verify offline behavior in Live
+### 7. TEST - verify offline behavior in Live
 
 **Assessment.** Partly done. The persistent page-side cache shipped in 1.0.0 and was
 verified in Live: a sample played once online still plays after a restart with the
