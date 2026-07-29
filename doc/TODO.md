@@ -28,58 +28,46 @@ as `copyPath()` in `@m4l-jweb/bridge`.
 
 ## Open Tasks
 
-### 1. FIXME - Export renders, then places nothing
+### 1. TEST - Export, now that the save is fixed upstream
 
-**Seen in Live on 1.0.0.** Export renders and fails at the last step with
-`could not place save: -1 bytes at destination`. `-1` is what the wrapper reports when
-it cannot size the destination at all, so the `.part` was never placed over the target.
+**Cause found, in the library, on 2026-07-29.** Nothing was ever wrong with this repo's
+Export. `[js]`'s `File` had written a stray `m4l-jweb-save.part` into Max's own folder
+once, from a relative path, and every save since resolved that NAME to the stray instead
+of the device folder - so the `.part` was never beside the .amxd and `[maxurl]` could
+not place it. `doc/MAX-FACTS.md` upstream has the mechanism. The fossils of this repo's
+own exports were still there: `rndA.wav.part` and `rndB.wav.part`, 176444 bytes each,
+in `Ableton/Resources/Max`.
 
-**Re-tested on 1.2.1: still fails.** The save protocol is the library's (`save_begin` /
-`save_chunk` / `save_end`, then a `file://` place through `[maxurl]`), and the upstream
-fix that landed after this was first seen did not change the outcome. So it is not the
-version, and the triage below is live.
+`hello-downloads` saves correctly with the stray removed. The library refuses a relative
+save path now, so it cannot recur.
 
-**Step 3 is ruled out permanently now**, not just checked: `[maxurl]` is derived from
-`src/app/strudel/files.ts`, so the device cannot be built without it. Two candidates
-remain.
+**The exact next test:** Export on `alienmind-gugelhupf` and on
+`alienmind-gugelhupf-drums-sampler`, and check the .wav is beside the .amxd. If a machine
+was poisoned before this fix the stray is still there - `[js]` cannot delete it, so it
+has to go by hand, and the wrapper now posts a line saying so on a failed place.
 
-1. Does the `.part` exist next to the device, at the right size, after `save_end`? Then
-   only the place step is broken.
-2. Does the device folder resolve to a real writable directory? An UNSAVED patcher has
-   no folder at all, and every path is then relative to nowhere. Worth checking FIRST -
-   it is one console line, and `-1 bytes at destination` is what a path relative to
-   nowhere would produce. The wrapper now posts
-   `patcher is not saved - no device folder, and every relative path resolves against
-   nowhere` at ui_ready when that is the case, so the console answers this without a
-   separate test.
-3. ~~Is the `download` chain on the device?~~ Derived from the declaration.
-
-**The exact next test:** run Export and capture the Max console for the whole attempt.
-Nothing above can be narrowed without it - the console from a device that merely LOADED
-says nothing about a save.
-
-**Also unresolved: WHOSE pattern Export bounces.** It renders the scratchpad's, because
-that is the engine the device page has, and the music now lives in the Studio. Either it
-moves behind the shim (the Studio renders and saves) or it is cut. Decide before it is
-fixed - there is no point fixing a bounce of the wrong thing.
+**Still unresolved, and unrelated: WHOSE pattern Export bounces.** It renders the
+scratchpad's, because that is the engine the device page has, and the music now lives in
+the Studio. Either it moves behind the shim (the Studio renders and saves) or it is cut.
 
 ### 2. TEST - the sample browser saves flat now
 
-The subdirectory question is answered: `alienmind-gugelhupf-sample-browser` reported
-`Saved nothing: could not place save: -1 bytes`, which is the drawer's entry exactly -
-`[js]`'s `File` and `[maxurl]` resolve a subdirectory differently, so the place finds
-nothing. Every download had been failing at that last step for as long as `localPath()`
-returned `samples/<pack>/...`, and the `.part` was written and size-checked first, which
-is why the failure looked like a save that nearly worked.
+The browser's downloads were failing, and `localPath()` now returns
+`<pack>_<name>_<n>.wav`, flat in the device folder, with the copy button offering that
+folder. **The paths users drag from have changed** - anything already dragged into a set
+from `samples/` points at a file that is not there, and there was never a working save
+to break.
 
-`localPath()` now returns `<pack>_<name>_<n>.wav`, flat in the device folder, and the
-copy button offers the device folder itself. **The paths users drag from have changed** -
-anything already dragged into a set from `samples/` still points at a file that is not
-there, and there was never a working save to break.
+**But the reason given for it was wrong, and the subdirectory rule is now UNPROVEN.**
+The failure was the stray `.part` in Max's folder (item 1), which failed every save flat
+or nested. The drawer's "a subdirectory fails the place" entry was measured under the
+same poisoned condition and proves nothing on its own. Flat still works and costs
+nothing, so it stays for now - but if `samples/<pack>/` is wanted back, it is one test,
+not a redesign.
 
 **The exact next test:** audition a sound, confirm the row does not say "Saved nothing",
-and check that `<pack>_<name>_0.wav` sits next to the .amxd rather than a `.part`. Then
-drag that row into a Live track.
+and check that `<pack>_<name>_0.wav` sits next to the .amxd. Then drag that row into a
+Live track.
 
 ### 3. TEST - the path on the clipboard, still unwatched
 
