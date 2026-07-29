@@ -117,6 +117,16 @@ export interface EngineOptions {
 	 */
 	slot?: "code" | "miniCode";
 	/**
+	 * Whether this engine is the one Live's transport drives. Default true - only the
+	 * Strudel device has a second engine to lose the transport to (app/strudel/transport.ts).
+	 *
+	 * False does NOT mean the `play` parameter stops working: the parameter is Live's,
+	 * shared, and automation must keep writing it. It means this engine stands down -
+	 * it goes quiet and stays quiet - while the other one sounds. Standing down never
+	 * clears `play`, because that would stop the engine that legitimately owns it.
+	 */
+	transport?: boolean;
+	/**
 	 * What this device adds to the NoteContext: `scale`, or `drumMap`. MUST be
 	 * memoized by the caller - it keys the recompile below, so a fresh object every
 	 * render would re-evaluate the pattern on every render.
@@ -199,6 +209,9 @@ export interface EngineState {
 	playing: Span[];
 	/** Real Strudel engine, running live in a Web Worker. */
 	live: boolean;
+	/** Whether Live's transport drives this engine at all - false while the other one
+	 *  owns it, when `live` is false for a reason that is not "stopped". */
+	transport: boolean;
 	evalError: string | null;
 	run: () => void;
 	hush: () => void;
@@ -226,6 +239,8 @@ export function useStrudelEngine(opts: EngineOptions): EngineState {
 	// worker's sink mode. The ref keeps the (bound-once) worker handler reading the current
 	// callback rather than the one it closed over at mount.
 	const sink = opts.voiceSink ? "voice" : opts.superdoughSink ? "superdough" : "note";
+	/** Does Live's transport drive THIS engine? See the option's own note. */
+	const transport = opts.transport ?? true;
 	const voiceSinkRef = useRef(opts.voiceSink);
 	voiceSinkRef.current = opts.voiceSink;
 	const superdoughSinkRef = useRef(opts.superdoughSink);
@@ -571,6 +586,12 @@ export function useStrudelEngine(opts: EngineOptions): EngineState {
 		// The voice sink is exempt: its bare tokens are SAMPLE NAMES, not pitches, so the
 		// note-mini parser's "errors" (it cannot resolve `bd`) do not apply - asSampleCode
 		// wraps the raw text in s(), and an unknown sound is reported by the sink, not here.
+		// Not this engine's transport: still WRITE the parameter, because the button was
+		// pressed and the other engine is listening to it - just do not start here.
+		if (!transport) {
+			setPlayParam(true);
+			return;
+		}
 		if (sink === "voice" || !isBareMini(text) || errors.length === 0) {
 			workerRef.current?.postMessage({ t: "code", code: text, ctx: noteCtx, liveScale, sink });
 			setLive(true);
@@ -578,7 +599,7 @@ export function useStrudelEngine(opts: EngineOptions): EngineState {
 			return;
 		}
 		setStatus(`Parse error at ${errors[0].pos}: ${errors[0].msg}`);
-	}, [text, noteCtx, liveScale, errors, setPlayParam, sink]);
+	}, [text, noteCtx, liveScale, errors, setPlayParam, sink, transport]);
 
 	// Live 12's scale, the drum map, the octave/shift controls: all must reach a
 	// pattern that is ALREADY PLAYING. They are baked into the code the worker
@@ -601,16 +622,28 @@ export function useStrudelEngine(opts: EngineOptions): EngineState {
 		workerRef.current?.postMessage({ t: "code", code: textRef.current, ctx: noteCtx, liveScale, sink });
 	}, [noteCtx, liveScale, live, sink]);
 
-	const hush = useCallback(() => {
+	/** Go quiet WITHOUT touching `play` - for losing the transport, not for stopping. */
+	const standDown = useCallback(() => {
 		workerRef.current?.postMessage({ t: "hush" });
 		setLive(false);
+	}, []);
+
+	const hush = useCallback(() => {
+		standDown();
 		setPlayParam(false);
-	}, [setPlayParam]);
+	}, [standDown, setPlayParam]);
 
 	useEffect(() => {
+		// Ownership can flip while this engine is sounding - the Studio's pattern is
+		// typed into an empty slot, or cleared out of a full one - so silence it here
+		// rather than only at the next transport change.
+		if (!transport) {
+			if (live) standDown();
+			return;
+		}
 		if (playParam && !live) run();
 		else if (!playParam && live) hush();
-	}, [playParam, live, run, hush]);
+	}, [transport, playParam, live, run, hush, standDown]);
 
 	return {
 		text,
@@ -637,6 +670,7 @@ export function useStrudelEngine(opts: EngineOptions): EngineState {
 		warning,
 		playing,
 		live,
+		transport,
 		evalError,
 		run,
 		hush,

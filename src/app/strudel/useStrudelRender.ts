@@ -71,6 +71,16 @@ export function useStrudelRender(
 	 * then, and a second writer just renames its dials from under it.
 	 */
 	describeKnobs = true,
+	/**
+	 * Whether the SCRATCHPAD is the engine Live's transport drives. False whenever the
+	 * Studio holds a pattern - the two engines share one track and one `play`, so
+	 * exactly one of them sounds (app/strudel/transport.ts).
+	 *
+	 * Export is unaffected: it bounces THIS page's pattern whether or not this page is
+	 * the one currently sounding, because this is the only pattern the device page can
+	 * render in its own scope. See exportAudio.
+	 */
+	transport = true,
 ) {
 	const [samplesNote, setSamplesNote] = useState<string | null>("Loading samples...");
 	const initialized = useRef(false);
@@ -119,6 +129,7 @@ export function useStrudelRender(
 		// stays empty unless somebody types a scope or a control snippet into it.
 		// Sharing the slot meant hearing both engines at once, which is what it did.
 		slot: "miniCode",
+		transport,
 		initialText: "",
 		ctx: EMPTY_CTX,
 		liveScale: "C4:major",
@@ -211,6 +222,13 @@ export function useStrudelRender(
 	 */
 	const exportAudio = useCallback(async () => {
 		if (exporting) return;
+		// The scratchpad is empty in its normal state, and the Studio's pattern is the
+		// one playing then - so an Export with nothing here would bounce silence and
+		// look like a broken renderer. Say which pattern this button renders instead.
+		if (!engine.text.trim()) {
+			setExportNote("Nothing to export - this bounces the scratchpad's pattern, not the Studio's");
+			return;
+		}
 		bouncing.current = true;
 		// The seam is unavoidable: pattern time has moved on while the sink was down, so
 		// the next event must re-pin rather than derive from a stale anchor.

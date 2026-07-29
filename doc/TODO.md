@@ -17,7 +17,11 @@ more; what follows is what 1.3 has to answer.
 
 ## Waiting on the library
 
-Nothing, as of 1.3.0. `defineFiles()` shipped upstream and this repo consumes it:
+Two things, both named in the items below: `createAudioClip()` (item 2) and a save that
+a WINDOW page can make (item 3d) - the Studio cannot write a file today, so it cannot
+bounce its own pattern even once strudel can render one.
+
+`defineFiles()` shipped upstream and this repo consumes it:
 `src/app/{strudel,drums-sampler,sample-browser}/files.ts` is the single declaration that
 a device writes to disk, and the `download` chain, the device-folder message and the
 `save_*` selectors are all derived from it. `patcher/devices.mjs` lists no `download`
@@ -28,29 +32,25 @@ as `copyPath()` in `@m4l-jweb/bridge`.
 
 ## Open Tasks
 
-### 1. TEST - Export, now that the save is fixed upstream
+### 1. TEST - one transport, one engine
 
-**Cause found, in the library, on 2026-07-29.** Nothing was ever wrong with this repo's
-Export. `[js]`'s `File` had written a stray `m4l-jweb-save.part` into Max's own folder
-once, from a relative path, and every save since resolved that NAME to the stray instead
-of the device folder - so the `.part` was never beside the .amxd and `[maxurl]` could
-not place it. `doc/MAX-FACTS.md` upstream has the mechanism. The fossils of this repo's
-own exports were still there: `rndA.wav.part` and `rndB.wav.part`, 176444 bytes each,
-in `Ableton/Resources/Max`.
+The Strudel device has two engines that both sound into the same track, and one `play`
+parameter used to start both, so the track carried the sum of the Studio's pattern and
+the device page's scratchpad. It is XOR now: `src/app/strudel/transport.ts` gives the
+transport to the Studio whenever the Studio's pattern has content, and to the scratchpad
+otherwise. The loser STANDS DOWN - it goes quiet without clearing `play`, because the
+parameter belongs to whichever engine is sounding.
 
-`hello-downloads` saves correctly with the stray removed. The library refuses a relative
-save path now, so it cannot recur.
+The predicate is the Studio's PATTERN and not whether its window is open. A window is
+shut to see the mixer and opened again a minute later, and the Studio's page sounds
+whether or not it is showing, so keying on visibility would mean the audio changed when
+a window was dragged. `wind.visible` is readable in the wrapper (it already polls it in
+`fitWindowPage`) if this ever needs revisiting.
 
-**The exact next test:** Export on `alienmind-gugelhupf` and on
-`alienmind-gugelhupf-drums-sampler`, and check the .wav is beside the .amxd. If a machine
-was poisoned before this fix the stray is still there - `[js]` cannot delete it, so it
-has to go by hand, and the wrapper now posts a line saying so on a failed place.
-
-**Still unresolved, and unrelated: WHOSE pattern Export bounces.** Confirmed in Live: it
-renders the SCRATCHPAD's, because that is the engine the device page has, while the music
-lives in the Studio. Either it moves behind the shim (the Studio renders and saves) or it
-is cut. Decide before item 2 is built - a bounce that lands in a clip is worse than
-useless if it is a bounce of the wrong pattern.
+**The exact next test:** on `alienmind-gugelhupf`, press Run with the Studio's default
+pattern in it - only the Studio sounds. Clear the Studio, type a pattern in the device
+view's scratchpad, press Run - only the scratchpad sounds. Type into the Studio again
+while the scratchpad plays - the scratchpad goes quiet within a second.
 
 ### 2. FEAT - Export straight into a Live clip
 
@@ -86,47 +86,119 @@ rendered at, so the clip can be right rather than warped by guess.
 **Keep the copy-path button.** Live 12.0.4 and older have no such call, and the path is
 still the honest answer there.
 
-### 3. TEST - the sample browser saves flat now
+**What it bounces is settled: THIS PAGE's pattern, the scratchpad's.** The Studio's is
+not bounced, because it compiles in the Studio's own runtime and cannot be re-created
+faithfully in the device page's scope. Item 3 is the route to bouncing the Studio, and
+it goes through strudel itself rather than through this repo.
 
-The browser's downloads were failing, and `localPath()` now returns
-`<pack>_<name>_<n>.wav`, flat in the device folder, with the copy button offering that
-folder. **The paths users drag from have changed** - anything already dragged into a set
-from `samples/` points at a file that is not there, and there was never a working save
-to break.
+### 3. FEAT (upstream strudel) - render the pattern to a WAV, from strudel.cc itself
 
-**But the reason given for it was wrong, and the subdirectory rule is now UNPROVEN.**
-The failure was the stray `.part` in Max's folder (item 1), which failed every save flat
-or nested. The drawer's "a subdirectory fails the place" entry was measured under the
-same poisoned condition and proves nothing on its own. Flat still works and costs
-nothing, so it stays for now - but if `samples/<pack>/` is wanted back, it is one test,
-not a redesign.
+**The goal is a strudel feature, not an m4l one.** Strudel has no way to render a
+pattern to audio; the renderer this repo carries (`src/lib/render/offline.ts`,
+`determinism.ts`, `wav.ts`) is general and belongs upstream. Done there, the Studio can
+bounce its own pattern with nothing of ours in the payload, and `alienmind-gugelhupf`
+stops being able to export only the scratchpad.
 
-**The exact next test:** audition a sound, confirm the row does not say "Saved nothing",
-and check that `<pack>_<name>_0.wav` sits next to the .amxd. Then drag that row into a
-Live track.
+**Hard constraint: no dependency on anything outside strudel, in either direction.**
+The commits must be mergeable upstream on their own merits, and this repo must keep
+building against STOCK strudel - the shim asks for what may not be there and fails soft,
+exactly as it already does for `slider()` metadata.
 
-### 4. TEST - the path on the clipboard, still unwatched
+#### 3a. The renderer, in `superdough`
 
-Never verified end to end. It was blocked on item 1 - the copy button only appeared once
-something had been written, so a device whose Export failed could never be used to test
-the copy. **That coupling is gone**: `device_folder` arrives at `ui_ready` from the
-library's `defineFiles()` plumbing, and the button on `alienmind-gugelhupf` and
-`alienmind-gugelhupf-drums-sampler` follows the folder rather than the export. The
-sample browser's does too now that it saves flat - it offers the device folder, which
-exists before anything lands in it.
+A new `packages/superdough/render.mjs`, which is `src/lib/render/offline.ts` with the
+m4l-shaped edges taken off. Everything it needs is already exported by superdough
+(`setAudioContext`, `getSuperdoughAudioController`, `setSuperdoughAudioController`,
+`clearNodePools`, `resetGlobalEffects`, `loadWorklets`), so this is assembly, not new
+API:
 
-What is known: `document.execCommand("copy")` **returns true in a device page and copies
-nothing**, and the page cannot detect it - `navigator.clipboard.readText()` needs a
-secure context and a device page is `file://`. So a copy can be claimed but never read
-back. `copyPath()` in `@m4l-jweb/bridge` therefore trusts no claim: it attempts the copy,
-then shows the path in a focused, pre-selected field, and treats the browser's own `copy`
-event as the only confirmation.
+```js
+renderPattern(pattern, { cps, cycles, begin = 0, sampleRate = 44100 }) -> AudioBuffer
+```
 
-**The exact next test:** load `alienmind-gugelhupf`, press the copy button WITHOUT
-exporting anything, and paste into Explorer/Finder. If the manual field turns out not to
-receive Ctrl+C inside jweb either, then a device page cannot reach the system clipboard
-at all and the answer is a Max-side one, or none. History of what does not work:
-[DRAWER_OF_FAILED_IDEAS.md](DRAWER_OF_FAILED_IDEAS.md).
+The four things that make it work, and which a fresh attempt gets wrong:
+
+- **`loadWorklets()`, never `initAudio()`.** `initAudio` awaits `initKabelsalat()`
+  unconditionally and that hangs under an `OfflineAudioContext`. kabelsalat is only
+  needed for the `kabel` synth type.
+- **`clearNodePools()` on BOTH sides of the render.** The pool is keyed by node type
+  across contexts, so a node pooled by the realtime path is handed to the offline one
+  and throws "cannot connect to an AudioNode belonging to a different audio context" -
+  intermittently, depending on what was pooled.
+- **`await` each `superdough()` call.** That is what makes sample fetch and
+  `decodeAudioData` finish before `startRendering()`, so sample patterns are not
+  rendered as silence.
+- **Serialize renders behind a promise queue, and restore the previous context in
+  `finally`.** The context and the output controller are module-level singletons; a
+  second render swaps them under the first. Nulling instead of restoring makes the next
+  `getAudioContext()` build a fresh realtime context - which under `[jweb~]` means the
+  page comes back silent.
+
+`packages/superdough/wav.mjs` carries the 16-bit PCM encoder (`src/lib/wav.ts`,
+dependency-free as it stands). The loop length comes from `renderPeriod()`
+(`src/lib/render/determinism.ts`) - it queries the pattern at growing cycle counts until
+the haps repeat, capped - so the UI does not have to ask "how many cycles".
+
+#### 3b. The UI, in the website
+
+**Put it in the panel, not next to Play.** A render is the one action in strudel that
+can take seconds and touch the network (unloaded samples), and the transport bar is
+where reflexes live. A `render` tab in `website/src/repl/components/panel/Panel.jsx` -
+cycles (defaulting to the detected period), sample rate, a Render button, the resulting
+length - can say what it is about to do. Promote it to the main bar later if it earns it.
+
+#### 3c. The seam that lets m4l save the file, with strudel knowing nothing about m4l
+
+The website's default delivery is a browser download - `URL.createObjectURL` and an
+`<a download>`. Before doing it, dispatch a CANCELABLE event:
+
+```js
+const ev = new CustomEvent('strudel:render', {
+  detail: { blob, buffer, seconds, cycles, cps, sampleRate, name },
+  cancelable: true,
+});
+if (window.dispatchEvent(ev)) downloadBlob(blob, name);   // nobody claimed it
+```
+
+Stock strudel downloads. Our shim adds a listener, calls `preventDefault()`, and writes
+the bytes with `saveToFile()` instead. No m4l symbol appears upstream, and the hook is
+useful to any embedder. Expose `window.strudelRender(opts)` alongside it so a host can
+START a render too - that is what lets the device view's Export button bounce the
+STUDIO's pattern rather than its own.
+
+#### 3d. What is blocked here until the library moves
+
+The Studio is a floating window, and **a window page cannot save today**. The wrapper's
+`window()` dispatch passes `ui_ready`/`get_state`/`sync_state`/`param_*` through and
+sends everything else to `onWindowMessage`; worse, `replyWindow` is restored when the
+dispatch returns, while a save's final place step comes back later from `[maxurl]` - so
+a window-originated save would write the file and reply `save_ok` to the DEVICE view.
+The library has to record the origin window on the pending request instead. Until then
+3a-3c stand on their own (they download), and only the m4l wiring waits.
+
+### 4. FEAT (upstream strudel) - a Sliders pane in the sidebar
+
+Same shape as item 3 and the same constraint: it is a strudel feature that this repo
+happens to want. A pattern's `slider()` calls are already gathered here - the shim reads
+`strudelMirror.widgets` after each evaluation and puts the first eight on the device's
+S1..S8 dials - and strudel.cc itself has nowhere to see them but inline in the code.
+
+**The design is written: [FEAT-SLIDERS.md](FEAT-SLIDERS.md).** Sections 1 and 2 are the
+upstream halves - carry an options object (`{ name, unit, order }`) through
+`sliderTranspilerPlugin` into `sliderConfig`, then a `sliders` tab in `Panel.jsx` with a
+`SlidersTab.jsx` that sorts by `order` then `from` and posts the same
+`{ type: 'cm-slider', id, value }` message the inline widget posts. What that document
+does not carry, and this item adds:
+
+- **The transpiler must never throw on half-typed code** - it runs on every keystroke.
+  Non-literal properties are skipped, not rejected.
+- **The metadata stays optional and the drop stays silent.** `slider(0.5)` is unchanged
+  and a fifth argument already runs in stock strudel (it is parsed and discarded), so
+  the same pattern text plays identically with or without these commits.
+- **Keep the shim's local parse** (FEAT-SLIDERS.md section 4) after this lands. It reads
+  the options out of the code text, and it is what keeps this repo working against a
+  stock submodule. It prefers `w.name` when the transpiler provides it, so it retires
+  itself only when the fork is the only thing anyone builds against.
 
 ### 5. FEAT - native MIDI input (`midiIn`/`kb()`) and MIDI output
 

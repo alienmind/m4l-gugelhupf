@@ -78,10 +78,12 @@ export function ClipButton({ onOpen, className }: { onOpen: () => void; classNam
 }
 
 /** Bounce the pattern to a WAV next to the device. */
-export function ExportButton({ onExport, busy = false, className }: {
+export function ExportButton({ onExport, busy = false, className, title }: {
 	onExport: () => void;
 	busy?: boolean;
 	className?: string;
+	/** Overridden where "this pattern" is ambiguous - the Strudel device has two. */
+	title?: string;
 }) {
 	return (
 		<Button
@@ -90,7 +92,7 @@ export function ExportButton({ onExport, busy = false, className }: {
 			onClick={onExport}
 			disabled={busy}
 			active={busy}
-			title="Export: render this pattern to a WAV next to the device, then drag it into a track"
+			title={title ?? "Export: render this pattern to a WAV next to the device, then drag it into a track"}
 		/>
 	);
 }

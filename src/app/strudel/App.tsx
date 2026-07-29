@@ -12,6 +12,7 @@ import { Visualizer } from "./Visualizer";
 import { useReplKnobs } from "./useReplKnobs";
 import { useReplRemote } from "./useReplRemote";
 import { useStrudelRender } from "./useStrudelRender";
+import { transportOwner } from "./transport";
 import surface from "./surface";
 
 /**
@@ -46,7 +47,16 @@ export default function App() {
 	// declared any faders decides whether this page's scratchpad is allowed to name the
 	// S1..S8 dials. Two engines, one pool - see useSliderKnobs' `describe`.
 	const { faders, declared } = useReplKnobs();
-	const s = useStrudelRender(!declared);
+	/**
+	 * ONE TRANSPORT, ONE ENGINE. Both pages sound into the same track, so `play`
+	 * starting both meant the track carried the sum of the Studio's pattern and the
+	 * scratchpad's. The Studio's own pattern decides which of them Live drives -
+	 * transport.ts has the reasoning, including why it is not the window's visibility.
+	 */
+	const [studioText] = useStateSync(surface, "code");
+	const owner = transportOwner(studioText);
+	const s = useStrudelRender(!declared, owner === "scratchpad");
+	const [play, setPlay] = useParam(surface, "play");
 	const [showAbout, setShowAbout] = useState(false);
 
 	// The native transport panel behind the view switch - the MIDI device's mechanism.
@@ -86,7 +96,7 @@ export default function App() {
 	};
 	// Live's transport and the eight native dials reach the DEVICE, never a floating
 	// window - so the device view passes them on to the REPL's page.
-	useReplRemote();
+	useReplRemote(owner === "studio");
 
 	if (showAbout) {
 		// RENDER HEALTH, debug-only
@@ -117,10 +127,22 @@ export default function App() {
 					onClick={() => setShowAbout(true)}
 					className="shrink-0 text-xs font-semibold tracking-tight hover:text-primary transition-colors cursor-pointer"
 				>Gugelhupf</button>
-				<RunButton className="ml-auto" live={s.live} onRun={s.run} onStop={s.hush} />
+				{/* The transport is Live's parameter, and it drives whichever engine owns
+				    it. When the Studio does, this page has no `live` of its own to show -
+				    the parameter is the only thing that knows, so read it directly. */}
+				<RunButton
+					className="ml-auto"
+					live={owner === "studio" ? !!play : s.live}
+					onRun={owner === "studio" ? () => setPlay(true) : s.run}
+					onStop={owner === "studio" ? () => setPlay(false) : s.hush}
+				/>
 				{/* Allowed while playing: the bounce takes superdough's context over for its
 				    duration, so playback goes quiet and resumes (useStrudelRender). */}
-				<ExportButton onExport={s.exportAudio} busy={s.exporting} />
+				<ExportButton
+					onExport={s.exportAudio}
+					busy={s.exporting}
+					title="Export: render THIS PAGE's pattern to a WAV next to the device, then drag it into a track. The Studio's own pattern is not bounced - it renders in its own runtime, not this one."
+				/>
 				{/* The local strudel.cc, in its own window, playing straight into the track. */}
 				<Button onClick={openStudio} variant="ghost" title="Open the local strudel.cc - the full REPL, playing into this track">
 					REPL
