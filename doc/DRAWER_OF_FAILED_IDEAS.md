@@ -72,7 +72,11 @@ one bundle.
 
 We attempted to use the `DownloadURL` Chromium drag type so that dragging a sample browser row onto Live's audio lane would prompt Chromium to download the file to `%TEMP%` and pass it to Live as a native `CF_HDROP` file drag. We tested passing the remote `https://` URL in the payload, but the file handoff did not occur. The drop target in Live (and even notepad.exe) only received the raw text payload, proving that the CEF runtime inside Max 8 strips the `DownloadURL` data entirely.
 
-Without native file drop support from the webview, there is no scripted way to create an audio clip from a file path in Ableton Live (LOM only supports `ClipSlot.create_clip` for MIDI). The shipping answer is the **"Copy folder path"** button: the user pastes the path into Explorer/Finder and drags the file into Live from there. It began as **"Show folder"** - see the reveal entry below for why that could not be made to work.
+The drag itself stays dead: without native file drop from the webview there is no way to make a ROW draggable into Live.
+
+**But the sentence that used to follow this one was wrong, and it cost months.** It read "there is no scripted way to create an audio clip from a file path in Ableton Live (LOM only supports `ClipSlot.create_clip` for MIDI)". `create_clip` is the MIDI one; **`ClipSlot.create_audio_clip(path)` and `Track.create_audio_clip(path, position)` also exist**, in Live 12.0.5 and newer, and take an absolute path to an audio file. Nobody re-read the LOM entry after finding the MIDI-only note on its neighbour, and the copy-path workaround was built on that. The design lives in [TODO.md](TODO.md) and in m4l-jweb's backlog.
+
+Until that ships, the answer remains the **copy-path** button: the user pastes the full file path into Explorer/Finder and drags from there. It began as **"Show folder"** - see the reveal entry below for why that could not be made to work.
 
 ## Superdough rendering (Route B) - walls hit during the spikes (2026-07-19)
 
