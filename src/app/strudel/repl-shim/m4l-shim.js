@@ -51,6 +51,33 @@
 		console.warn(TAG, "could not pin the audio device:", e && e.message);
 	}
 
+	/* -------------------------------------------------------------- *
+	 * THE STATE-SLOT WIRE FORMAT, which this file has to speak by hand.
+	 *
+	 * A Max [dict] is a key/value map and cannot hold a bare string, so every slot
+	 * value travels wrapped: `{"__value": <whatever>}`. The React pages get this from
+	 * @m4l-jweb/surface's store; nothing bundles into this file, so it is repeated
+	 * here - and when it was NOT, the shim read the envelope as "not a string",
+	 * ignored every slot it was sent, and therefore never marked itself restored and
+	 * never wrote the pattern back. The Studio silently stopped saving with the set.
+	 *
+	 * Spaces are escaped on the way out because Max splits a message into atoms on
+	 * whitespace: a pattern with two spaces in it would come back with one.
+	 * -------------------------------------------------------------- */
+	var ENVELOPE = "__value";
+
+	function encodeSlot(value) {
+		return JSON.stringify({ __value: value }).replace(/ /g, "\\u0020");
+	}
+
+	function decodeSlot(json) {
+		var parsed = JSON.parse(json);
+		if (parsed && typeof parsed === "object" && ENVELOPE in parsed) return parsed[ENVELOPE];
+		// A set written before the envelope, and an empty dict from a slot Live has
+		// never saved. Neither is an error; the caller decides what to do with it.
+		return parsed;
+	}
+
 	var max = null; // set once jweb has injected it
 	var editor = null;
 	var lastSentCode = null;
@@ -483,7 +510,7 @@
 
 		max.bindInlet("state_code", function (json) {
 			try {
-				var code = JSON.parse(json);
+				var code = decodeSlot(json);
 				if (typeof code !== "string") return;
 				if (restored) {
 					// A later write is another view editing the same slot (the mini
@@ -523,7 +550,7 @@
 			if (typeof code !== "string" || code === lastSentCode) return;
 			lastSentCode = code;
 			try {
-				max.outlet("sync_state", "code", JSON.stringify(code));
+				max.outlet("sync_state", "code", encodeSlot(code));
 			} catch (e) {
 				console.warn(TAG, "could not persist the pattern:", e && e.message);
 			}
@@ -532,12 +559,46 @@
 		/* ------------------------------------------------------------ *
 		 * 4. Transport and knobs, forwarded by the device view.
 		 * ------------------------------------------------------------ */
+		/* ------------------------------------------------------------ *
+		 * THE TRANSPORT IS SHARED WITH THE DEVICE PAGE'S OWN ENGINE, and only one of
+		 * them may sound - the two would otherwise sum into the same track. The `engine`
+		 * slot says which, and it is CLAIMED BY WHOEVER STARTS: evaluating here takes
+		 * the track back from the device view's scratchpad.
+		 *
+		 * `editor.evaluate` is wrapped rather than hooked, because the REPL evaluates
+		 * from several places - its own play button, Ctrl+Enter, the pattern browser -
+		 * and all of them mean the same thing. An evaluation WE caused (Live's transport
+		 * arriving as set_play) claims nothing: the owner is already whoever the device
+		 * page says it is, and re-claiming from inside a forwarded press would make the
+		 * Studio steal the transport every time Live started.
+		 * ------------------------------------------------------------ */
+		var forwarding = false;
+
+		function claimTransport() {
+			try {
+				max.outlet("sync_state", "engine", encodeSlot("studio"));
+			} catch (e) {
+				console.warn(TAG, "could not claim the transport:", e && e.message);
+			}
+		}
+
+		if (typeof editor.evaluate === "function") {
+			var evaluate = editor.evaluate.bind(editor);
+			editor.evaluate = function () {
+				if (!forwarding) claimTransport();
+				return evaluate.apply(null, arguments);
+			};
+		}
+
 		max.bindInlet("set_play", function (v) {
+			forwarding = true;
 			try {
 				if (Number(v)) editor.evaluate();
 				else editor.stop();
 			} catch (e) {
 				console.warn(TAG, "transport failed:", e && e.message);
+			} finally {
+				forwarding = false;
 			}
 		});
 

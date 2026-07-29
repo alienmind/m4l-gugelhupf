@@ -586,12 +586,12 @@ export function useStrudelEngine(opts: EngineOptions): EngineState {
 		// The voice sink is exempt: its bare tokens are SAMPLE NAMES, not pitches, so the
 		// note-mini parser's "errors" (it cannot resolve `bd`) do not apply - asSampleCode
 		// wraps the raw text in s(), and an unknown sound is reported by the sink, not here.
-		// Not this engine's transport: still WRITE the parameter, because the button was
-		// pressed and the other engine is listening to it - just do not start here.
-		if (!transport) {
-			setPlayParam(true);
-			return;
-		}
+		// NO `transport` GATE HERE. A page that calls run() is claiming the transport in
+		// the same event (App.tsx's runScratchpad), and this callback still closes over
+		// the ownership of the render it was made in - so refusing here would refuse the
+		// very press that was taking ownership. Losing the transport is what silences an
+		// engine, and that is the effect below.
+		//
 		// An empty pattern must not go LIVE. It makes no sound, and `live` is what the
 		// transport effect and the Run button read - a silent engine that believes it is
 		// playing cannot be started, only stopped and started again.

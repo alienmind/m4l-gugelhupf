@@ -1,28 +1,30 @@
 /**
  * transport.test.ts - which engine Live's transport drives.
  *
- * Two engines sound into one track and there is one `play` parameter, so the rule
- * that keeps them from playing at once is worth pinning: it is the Studio's PATTERN
- * that decides, not its window.
+ * Two engines sound into one track and there is one `play` parameter, so the rule that
+ * keeps them from playing at once is worth pinning. It is a CLAIM, stored in a slot -
+ * deriving it from whether the Studio's pattern was empty meant the only way to hear
+ * the scratchpad was to delete the music.
  */
 import { describe, expect, test } from "vitest";
-import { transportOwner } from "@/app/strudel/transport";
+import { DEFAULT_OWNER, transportOwner } from "@/app/strudel/transport";
 
 describe("transportOwner", () => {
-	test("a Studio holding a pattern owns the transport", () => {
-		expect(transportOwner('note("c3 e3")')).toBe("studio");
+	test("the slot is the answer when it holds one", () => {
+		expect(transportOwner("scratchpad")).toBe("scratchpad");
+		expect(transportOwner("studio")).toBe("studio");
 	});
 
-	test("an emptied Studio hands it to the scratchpad", () => {
-		expect(transportOwner("")).toBe("scratchpad");
-		// Whitespace is what select-all-and-delete leaves behind, and it is not a pattern.
-		expect(transportOwner("  \n\t ")).toBe("scratchpad");
+	test("a set that predates the slot plays the Studio", () => {
+		// The state store hands back the declared default, `{}` from a dict Live has
+		// never saved, or nothing at all before the first sync.
+		expect(transportOwner(undefined)).toBe(DEFAULT_OWNER);
+		expect(transportOwner({})).toBe(DEFAULT_OWNER);
+		expect(transportOwner("")).toBe(DEFAULT_OWNER);
 	});
 
-	test("a slot Live has never saved is not a Studio pattern", () => {
-		// The state store hands back whatever came out of the set - `{}` on a fresh
-		// instance, undefined before the first sync.
-		expect(transportOwner(undefined)).toBe("scratchpad");
-		expect(transportOwner({})).toBe("scratchpad");
+	test("a value nobody wrote is not honoured", () => {
+		expect(transportOwner("both")).toBe(DEFAULT_OWNER);
+		expect(transportOwner(1)).toBe(DEFAULT_OWNER);
 	});
 });

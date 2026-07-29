@@ -6,22 +6,23 @@
  * (the `miniCode` slot). Live's transport is ONE parameter, so before this it started
  * both and the track carried the sum of two patterns.
  *
- * XOR, and the predicate is the Studio's own pattern rather than whether its window
- * happens to be open. A window is closed to see the mixer and opened again a minute
- * later; the pattern is what the set saves and what the musician thinks of as "the
- * music". The Studio's page sounds whether or not its window is showing, so keying on
- * visibility would also mean the audio changed when a window was dragged shut.
+ * XOR, and the owner is WHOEVER WAS STARTED LAST. Pressing Run in the device view
+ * gives the transport to the scratchpad; evaluating in the Studio takes it back. It is
+ * a saved slot rather than something derived, for a reason measured in Live: the first
+ * build derived it from whether the Studio's pattern was empty, which meant the only
+ * way to hear the scratchpad was to DELETE the Studio's music. Ownership is a choice
+ * the musician makes, so it is stored as one.
+ *
+ * Not the window's visibility either: a window is shut to see the mixer and opened
+ * again a minute later, and the Studio's page sounds whether or not it is showing.
  */
 export type TransportOwner = "studio" | "scratchpad";
 
-/**
- * Who the transport drives, given what the Studio has in it.
- *
- * The Studio holds a pattern by default (surface.ts's INITIAL_TEXT), so a fresh
- * device is Studio-owned - which is what it already sounded like. The scratchpad
- * takes over only once the Studio has been emptied, and an empty scratchpad then
- * plays nothing, which is the honest result of having written nothing anywhere.
- */
-export function transportOwner(studioText: unknown): TransportOwner {
-	return typeof studioText === "string" && studioText.trim() ? "studio" : "scratchpad";
+/** What a set that predates the slot - or a fresh instance - starts as. The Studio is
+ *  where the music is, and it is what a device with nothing typed anywhere plays. */
+export const DEFAULT_OWNER: TransportOwner = "studio";
+
+/** Read the slot, tolerating anything a set can legitimately hand back. */
+export function transportOwner(slot: unknown): TransportOwner {
+	return slot === "scratchpad" || slot === "studio" ? slot : DEFAULT_OWNER;
 }

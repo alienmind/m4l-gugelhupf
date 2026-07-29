@@ -7,7 +7,8 @@ This document describes the high-level architecture, the build pipeline, the run
 > **0.9.9 - now migrated to `jweb~`.** Max 9's `[jweb~]` is an audio-capable browser object.
 > Until 0.9.5 used older [jweb] and everything was built on the assumption that a page could not put
 > sound on the track so lots of nasty workarounds were in place.
-> `[jweb~]` has signal outlets, so the page's Web Audio output *is* the device's
+> `[jweb~]` has signal outlets, so the page
+'s Web Audio output *is* the device's
 > audio now.
 
 ```
@@ -451,29 +452,37 @@ Facts this shape rests on, all measured in Live (2026-07-22):
 engine of its own (the scratchpad, `miniCode`) and the Studio has the real one (`code`),
 and both `[jweb~]` pairs are summed into the same track. `play` is a single Live
 parameter, so starting it used to start both and the track carried the sum of two
-patterns. `src/app/strudel/transport.ts` dispatches it instead: the Studio owns the
-transport whenever its pattern has content, the scratchpad owns it otherwise, and the
-one that does not owns nothing - `useStrudelEngine`'s `transport: false` STANDS THE
-ENGINE DOWN, going quiet without writing `play`, since clearing it would stop the engine
-that legitimately has it. Ownership is re-evaluated as the Studio's slot changes, so
-typing into an empty Studio silences a playing scratchpad within the slot's poll.
+patterns. The `engine` state slot says which one it drives, and the one that does not
+have it STANDS DOWN - `useStrudelEngine`'s `transport: false` goes quiet without writing
+`play`, since clearing it would stop the engine that legitimately has it.
 
-**A HANDOVER DOES NOT INHERIT THE PRESS**, and the first build of this got it wrong.
-`play` is still down when ownership moves - that is the normal case, since the moment
-worth handing over at is mid-performance - so the engine taking the transport started
-immediately, on whatever it was holding. For the scratchpad taking over from an emptied
-Studio that is NOTHING: the pattern is typed afterwards, and no keystroke re-evaluates
-(Run does), so it was an engine that believed it was playing silence and could not be
-started, only stopped and started again. Both sides now latch: an engine that gains the
-transport waits for `play` to be released and pressed again, while an engine holding it
-at mount still starts, so a set saved playing comes back playing. `run()` also refuses
-an empty pattern rather than going `live` on silence, which is what made the state
-unrecoverable rather than merely wrong.
+**Ownership is CLAIMED BY STARTING, not derived.** Run in the device view claims it for
+the scratchpad and then runs; evaluating in the Studio claims it back (the shim wraps
+`editor.evaluate`, so its play button, Ctrl+Enter and its pattern browser all count, while
+an evaluation caused by Live's own transport arriving as `set_play` claims nothing). The
+slot saves, so a set reopens on the engine it was left on.
 
-The predicate is the Studio's PATTERN, not its window. A window is closed to see the
-mixer and reopened a minute later, and the Studio's page sounds with its window shut, so
-visibility would mean the audio changed when a window was dragged. `wind.visible` is
-available in the wrapper (`fitWindowPage` polls it) if that ever turns out to be wanted.
+Two earlier rules were tried in Live and are not what ships. **Deriving it from whether
+the Studio's pattern was empty** made the only route to the scratchpad "delete your
+music", and in a set whose Studio held the default pattern the scratchpad could never be
+heard at all. **Window visibility** is worse: a window is shut to see the mixer, and the
+Studio's page sounds with its window closed, so the audio would change when a window was
+dragged (`wind.visible` is readable in the wrapper, `fitWindowPage` polls it, if that is
+ever wanted for something else).
+
+**A handover does not inherit the press.** `play` is still down when ownership moves, so
+an engine that simply started on it would start on whatever it held at that instant -
+nothing, for a scratchpad about to be typed into - and no keystroke re-evaluates, so it
+would be an engine that believed it was playing silence. Both sides latch: an engine that
+gains the transport waits for `play` to be released and pressed again, while one holding
+it at mount still starts, so a set saved playing comes back playing. `run()` also refuses
+an empty pattern rather than going `live` on silence, and an empty scratchpad claims
+nothing - taking the track from a playing Studio to run silence is the worst outcome
+available.
+
+**A page's `console.log` does not reach the Max console**, so it is useless as a
+diagnostic here: what a page needs the console to say has to go out as a message the
+wrapper `post`s.
 
 EXPORT is unaffected and bounces the DEVICE PAGE's pattern whichever engine is sounding,
 because that is the only one that compiles in this page's scope. Bouncing the Studio's
@@ -485,6 +494,18 @@ arms the audio (the REPL waits for a `mousedown` that a hidden window never gets
 pins the output device (`setSinkId` would steer the sound away from the `jweb~`
 outlets), persists the pattern to the `code` state slot so it saves with the LIVE SET,
 and maps Play/Stop and the eight dials onto the REPL. The submodule is never patched.
+
+**It has to speak the state-slot wire format BY HAND**, and for a while it did not.
+Nothing bundles into that file - it is copied into a built site - so the envelope every
+slot value travels in (`{"__value": ...}`, from @m4l-jweb/surface's store) is repeated in
+it. When the library gained the envelope and the shim did not, the shim read what it was
+sent as "not a string" and ignored it: it never marked itself restored, so its persist
+poll returned early on every tick and the Studio stopped saving its pattern into the set.
+Nothing raised, the `code` slot simply stayed at its default forever - which is also what
+made the transport's first predicate untestable, since the device page could never see
+the Studio's pattern change. Spaces are escaped on the way out for the usual reason: Max
+splits a message into atoms on whitespace, so `s("bd  sd")` would come back with one
+space.
 
 **Telling a dial what it IS, at runtime.** A pattern can describe a control -
 `m4lKnob(1, { name: 'cutoff', unit: 'Hz', range: [200, 2200] })` - and all three take:

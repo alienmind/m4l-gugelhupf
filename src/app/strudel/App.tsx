@@ -50,19 +50,27 @@ export default function App() {
 	/**
 	 * ONE TRANSPORT, ONE ENGINE. Both pages sound into the same track, so `play`
 	 * starting both meant the track carried the sum of the Studio's pattern and the
-	 * scratchpad's. The Studio's own pattern decides which of them Live drives -
-	 * transport.ts has the reasoning, including why it is not the window's visibility.
+	 * scratchpad's. Whichever was started LAST holds it - see transport.ts.
 	 */
-	const [studioText] = useStateSync(surface, "code");
-	const owner = transportOwner(studioText);
+	const [engineSlot, setEngineSlot] = useStateSync(surface, "engine");
+	const owner = transportOwner(engineSlot);
 	const s = useStrudelRender(!declared, owner === "scratchpad");
 	const [play, setPlay] = useParam(surface, "play");
-	// One line per handover, in the Max console. Which engine holds the transport is
-	// otherwise invisible, and "nothing sounds" looks the same whether the handover
-	// never happened or the engine that took it failed to start.
-	useEffect(() => {
-		console.log(`[transport] ${owner} has it`);
-	}, [owner]);
+
+	/**
+	 * Run, in the device view, is the SCRATCHPAD's - the Studio has its own. So it
+	 * claims the transport first and starts second, in one event: the state store
+	 * applies a write optimistically, so `s.run()` in the same handler already sees
+	 * itself as the owner and does not stand down on the next render.
+	 *
+	 * An empty scratchpad claims NOTHING. Taking the transport away from a playing
+	 * Studio to run silence is the worst outcome available here.
+	 */
+	const runScratchpad = () => {
+		if (!s.text.trim()) return s.run(); // reports "nothing to run", changes no state
+		setEngineSlot("scratchpad");
+		s.run();
+	};
 	const [showAbout, setShowAbout] = useState(false);
 
 	// The native transport panel behind the view switch - the MIDI device's mechanism.
@@ -136,15 +144,17 @@ export default function App() {
 				{/* The transport is Live's parameter, and it drives whichever engine owns
 				    it. When the Studio does, this page has no `live` of its own to show -
 				    the parameter is the only thing that knows, so read it directly. */}
+				{/* Run is the SCRATCHPAD's and always claims the transport for it; Stop
+				    stops whatever is playing, which is the Studio while it holds it. */}
 				<RunButton
 					className="ml-auto"
 					live={owner === "studio" ? !!play : s.live}
-					onRun={owner === "studio" ? () => setPlay(true) : s.run}
+					onRun={runScratchpad}
 					onStop={owner === "studio" ? () => setPlay(false) : s.hush}
 					title={
 						owner === "studio"
-							? "Play/Stop the STUDIO's pattern - it holds the transport while it has a pattern in it"
-							: "Play/Stop this page's scratchpad - it holds the transport while the Studio is empty"
+							? "The STUDIO is playing. Stop it here, or press Run to hand the track to this page's scratchpad."
+							: "Run this page's scratchpad - it has the track. The Studio takes it back when you evaluate there."
 					}
 				/>
 				{/* Allowed while playing: the bounce takes superdough's context over for its
