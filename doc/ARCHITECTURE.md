@@ -427,7 +427,17 @@ Facts this shape rests on, all measured in Live (2026-07-22):
   which Live's look-ahead hides for an instrument. `rendermode` stays at its default `1`
   (offscreen): `0` (onscreen) halts the graph outright, as does withholding the
   device-page engine (doc/DRAWER_OF_FAILED_IDEAS.md). The option lives on the library's
-  `window({ audio: true, latency })` primitive.
+  `window({ audio: true, latency })` primitive, and on `latency` in the device
+  declaration for the page's own `[jweb~]`.
+
+  **Every device whose `chains` include `webaudio` needs it**, and the criterion is the
+  chain rather than the sound source: `webaudio` takes `[jweb~]`'s signal outlets 0 and 1
+  into the track, so the ring buffer is in the path whether the page runs superdough or
+  plain Web Audio. The sample browser and the drums sampler ran on the object default for
+  a long time and stuttered for it; both carry `latency: 66` now, as the main device and
+  the synth already did. The drums sampler is the one that pays a real price - it is
+  played live, and 66 ms is audible on a drum hit where it is not on a sustained tone -
+  so correct it with Track Delay.
 
 `src/app/strudel/repl-shim/m4l-shim.js` is the only line of ours inside that app: it
 arms the audio (the REPL waits for a `mousedown` that a hidden window never gets),
