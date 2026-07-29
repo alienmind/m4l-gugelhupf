@@ -81,8 +81,10 @@ export default function App() {
 	const [showAbout, setShowAbout] = useState(false);
 	const [exporting, setExporting] = useState(false);
 	const [exportNote, setExportNote] = useState<string | null>(null);
-	/** The device's folder on disk, so "Copy folder path" has something to hand over. */
+	/** The device's folder on disk, so the copy button has something to hand over. */
 	const [folder, setFolder] = useState<string | null>(null);
+	/** The last file this device wrote, so the copy button can offer its full path. */
+	const [exported, setExported] = useState<string | null>(null);
 
 	/** The drum-machine catalog (one big map, keys `Machine_sound`), loaded once. */
 	const [dmSounds, setDmSounds] = useState<Sound[]>([]);
@@ -286,9 +288,10 @@ export default function App() {
 				src.start(Math.max(0, v.beginCycle / cps));
 			}
 			const wav = audioBufferToWav(await ctx.startRendering());
-			const name = `drums-export-${Date.now()}.wav`;
+			const name = `gugelhupf-drums-export-${Date.now()}.wav`;
 			await withDeadline(saveToFile(name, wav), 30_000, `Saving ${name}`);
-			setExportNote(`Exported ${name} (${seconds.toFixed(1)}s) - copy the folder path to find it`);
+			setExported(name);
+			setExportNote(`Exported ${name} (${seconds.toFixed(1)}s) - copy the path and drag it in`);
 		} catch (e) {
 			setExportNote("Export failed: " + (e instanceof Error ? e.message : String(e)));
 		} finally {
@@ -296,11 +299,18 @@ export default function App() {
 		}
 	}, [exporting, engine.tempo, engine.beatsPerCycle, engine.text, resolve, ensureLoaded]);
 
-	/** The export folder on the clipboard - Max cannot open a file manager (TODO item 1). */
+	/**
+	 * The exported FILE's full path on the clipboard - the folder only until there is one.
+	 *
+	 * The clipboard is the whole handoff: a device page cannot hand Live a file (CEF
+	 * strips the DownloadURL payload, doc/DRAWER_OF_FAILED_IDEAS.md), and Max cannot open
+	 * a file manager. A folder path leaves the user hunting for the newest .wav in it.
+	 */
 	const copyFolder = useCallback(async () => {
 		if (!folder) return;
-		setExportNote(copyMessage(await copyPath(folder), folder));
-	}, [folder]);
+		const path = exported ? `${folder}/${exported}` : folder;
+		setExportNote(copyMessage(await copyPath(path), path));
+	}, [folder, exported]);
 
 	const helpWindow = useWindow(surface, "help");
 	const strudelWindow = useWindow(surface, "strudel");
@@ -474,7 +484,7 @@ export default function App() {
 					disabled={!folder}
 					title={
 						folder
-							? "Copy the device folder path to the clipboard, to paste into Explorer/Finder"
+							? "Copy the exported file's full path to the clipboard - the device folder, until something has been exported"
 							: "The patcher is not saved, so the device has no folder"
 					}
 				/>

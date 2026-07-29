@@ -187,7 +187,7 @@ export default function App() {
 						icon={ClipboardCopy}
 						onClick={s.copyFolder}
 						disabled={!s.folder}
-						title="Copy the device folder path to the clipboard, to paste into Explorer/Finder"
+						title="Copy the exported file's full path to the clipboard - the device folder, until something has been exported"
 					/>
 				</div>
 			)}

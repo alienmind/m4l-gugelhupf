@@ -82,6 +82,8 @@ export function useStrudelRender(
 	/** Where the export lands, as the wrapper resolved it. The page cannot know its own
 	 *  device's folder; the wrapper sends it once at ui_ready (wrapper/device.ts). */
 	const [folder, setFolder] = useState<string | null>(null);
+	/** The last file this device wrote, so the copy button can offer its full path. */
+	const [exported, setExported] = useState<string | null>(null);
 	/** True while a bounce holds superdough's context. A ref, not the `exporting` state:
 	 *  the sink closes over its render's values and must see the flag the instant it flips. */
 	const bouncing = useRef(false);
@@ -164,14 +166,20 @@ export function useStrudelRender(
 	// whether or not anything has been exported yet.
 	useEffect(() => onDeviceFolder(setFolder), []);
 
-	/** Put the export folder on the clipboard - the honest replacement for a reveal that
-	 *  Max cannot perform (doc/TODO.md item 1). */
+	/**
+	 * Put the exported FILE's full path on the clipboard - the folder only until there
+	 * is one.
+	 *
+	 * The file, not the folder, because the path is what the user does the drag with:
+	 * a device page cannot hand Live a file (CEF strips the DownloadURL payload, see
+	 * doc/DRAWER_OF_FAILED_IDEAS.md), so the clipboard IS the handoff, and a folder path
+	 * still leaves them hunting for the newest .wav in it.
+	 */
 	const copyFolder = useCallback(async () => {
 		if (!folder) return;
-		setExportNote(
-			copyMessage(await copyPath(folder), folder),
-		);
-	}, [folder]);
+		const path = exported ? `${folder}/${exported}` : folder;
+		setExportNote(copyMessage(await copyPath(path), path));
+	}, [folder, exported]);
 
 	// Every slider() in the pattern, on a native S1..S8 dial.
 	const sliders = useSliderKnobs(surface, engine.sliderSpecs, engine.text, engine.setSliderValues, describeKnobs);
@@ -221,13 +229,14 @@ export function useStrudelRender(
 			// Render at the page's own rate, so the bounce matches what Live is running
 			// rather than forcing a resample on import.
 			const { wav, seconds } = await renderCycles(pat, cps, 0, cycles, getAudioContext().sampleRate);
-			const name = `strudel-export-${Date.now()}.wav`;
+			const name = `gugelhupf-export-${Date.now()}.wav`;
 			// Deadlined: saveToFile settles only when the wrapper replies, and a request
 			// that never reaches [maxurl] gets no reply at all - which showed up as a
 			// status stuck on "Rendering..." forever while a .part sat on disk. A bounded
 			// wait turns a silent hang into a message that says where to look.
 			await withDeadline(saveToFile(name, wav), 30_000, `Saving ${name}`);
-			setExportNote(`Exported ${name} (${seconds.toFixed(1)}s) - drag from the device folder`);
+			setExported(name);
+			setExportNote(`Exported ${name} (${seconds.toFixed(1)}s) - copy the path and drag it in`);
 		} catch (e) {
 			setExportNote("Export failed: " + (e instanceof Error ? e.message : String(e)));
 		} finally {
