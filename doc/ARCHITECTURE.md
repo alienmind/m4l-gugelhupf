@@ -439,6 +439,35 @@ Facts this shape rests on, all measured in Live (2026-07-22):
   played live, and 66 ms is audible on a drum hit where it is not on a sustained tone -
   so correct it with Track Delay.
 
+  **66 is final, and it is not switchable at runtime.** The ring buffer is per page, so
+  every sound that page makes crosses it - a sequenced hit and a pad pressed by hand
+  alike - and there is no per-event path to give one of them less. The only shape that
+  could exist is a mode switch writing the attribute live, which is unproven twice over
+  (whether `[jweb~]` reads `latency` after load at all, and whether resizing that buffer
+  mid-DSP survives - `rendermode: 0` did not). Not pursued: the loose setting is the one
+  that keeps the pattern clean, and that is the setting that matters more.
+
+**ONE TRANSPORT, ONE ENGINE - the two never sound together.** The device page has an
+engine of its own (the scratchpad, `miniCode`) and the Studio has the real one (`code`),
+and both `[jweb~]` pairs are summed into the same track. `play` is a single Live
+parameter, so starting it used to start both and the track carried the sum of two
+patterns. `src/app/strudel/transport.ts` dispatches it instead: the Studio owns the
+transport whenever its pattern has content, the scratchpad owns it otherwise, and the
+one that does not owns nothing - `useStrudelEngine`'s `transport: false` STANDS THE
+ENGINE DOWN, going quiet without writing `play`, since clearing it would stop the engine
+that legitimately has it. Ownership is re-evaluated as the Studio's slot changes, so
+typing into an empty Studio silences a playing scratchpad within the slot's poll.
+
+The predicate is the Studio's PATTERN, not its window. A window is closed to see the
+mixer and reopened a minute later, and the Studio's page sounds with its window shut, so
+visibility would mean the audio changed when a window was dragged. `wind.visible` is
+available in the wrapper (`fitWindowPage` polls it) if that ever turns out to be wanted.
+
+EXPORT is unaffected and bounces the DEVICE PAGE's pattern whichever engine is sounding,
+because that is the only one that compiles in this page's scope. Bouncing the Studio's
+is doc/TODO.md items 3 and 3d - it needs a renderer in strudel itself and a save a
+window page is allowed to make.
+
 `src/app/strudel/repl-shim/m4l-shim.js` is the only line of ours inside that app: it
 arms the audio (the REPL waits for a `mousedown` that a hidden window never gets),
 pins the output device (`setSinkId` would steer the sound away from the `jweb~`
