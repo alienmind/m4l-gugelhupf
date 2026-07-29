@@ -108,19 +108,28 @@ export default function App() {
 		return clearPreview; // a device view that goes away must not leave a loop running
 	}, [clearPreview]);
 
-	/** The downloads folder on the clipboard - the device folder itself, because
-	 *  localPath() saves flat into it. A save cannot reach a subdirectory. */
-	const copyFolder = useCallback(async () => {
-		if (!folder) return;
-		setStatus(copyMessage(await copyPath(folder), folder));
-	}, [folder]);
-
 	/** The list actually on screen. The cursor indexes THIS, not the catalog: a
 	 *  filtered list whose arrow keys walked the unfiltered one would be unusable. */
 	const shown = useMemo(() => {
 		const q = query.trim().toLowerCase();
 		return q ? sounds.filter((s) => s.name.toLowerCase().includes(q)) : sounds;
 	}, [sounds, query]);
+
+	/**
+	 * The cursor row's FILE on the clipboard, full path - the folder only when that row
+	 * has nothing on disk yet.
+	 *
+	 * The file rather than the folder because the clipboard is the entire handoff: the
+	 * row's own drag reaches Live as text and never as a file (CEF strips the
+	 * DownloadURL payload, doc/DRAWER_OF_FAILED_IDEAS.md), so what the user pastes has
+	 * to be the thing they want, not the place it lives among a hundred siblings.
+	 */
+	const copyFolder = useCallback(async () => {
+		if (!folder) return;
+		const rel = rows[shown[cursor]?.name ?? ""]?.path;
+		const path = rel ? `${folder}/${rel}` : folder;
+		setStatus(copyMessage(await copyPath(path), path));
+	}, [folder, rows, shown, cursor]);
 
 	/**
 	 * Fetch a map and show its sounds. There is no Load BUTTON any more - picking a map
@@ -485,7 +494,7 @@ export default function App() {
 					disabled={!folder}
 					title={
 						folder
-							? "Copy the samples folder path to the clipboard, to paste into Explorer/Finder"
+							? "Copy this sample's full path to the clipboard - the folder, until it has been auditioned"
 							: "The device folder is not known yet"
 					}
 				/>

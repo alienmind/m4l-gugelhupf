@@ -177,7 +177,7 @@ truncated to zero bytes and left behind. Naming it after the destination was fin
 the only writer was the sample browser, whose filenames come from the sample's URL: the
 same sample re-fetched reused the same scratch file. An audio export names its file after
 the moment it was rendered, so every bounce stranded another zero-byte
-`strudel-export-<timestamp>.wav.part` next to the real one, accumulating forever. The
+`gugelhupf-export-<timestamp>.wav.part` next to the real one, accumulating forever. The
 wrapper uses one `m4l-jweb-save.part` per device folder now - reused, overwritten, and at
 worst a single stray empty file however many exports are made. (Upstream in
 `@m4l-jweb/wrapper`; `tests/wrapper-max.test.mjs` pins it.)
@@ -356,7 +356,7 @@ and heard through the track. An instrument on the `webaudio` chain alone.
   fresh on the main thread (the worker's pattern lives in another thread and cannot be
   transferred), takes `renderPeriod()` capped at 32 cycles, renders through an
   `OfflineAudioContext` at the page's own sample rate, and `saveToFile`s a flat
-  `strudel-export-<timestamp>.wav` into the device folder. Three details in that renderer
+  `gugelhupf-export-<timestamp>.wav` into the device folder. Three details in that renderer
   are hard-won and must not be "simplified":
   - `loadWorklets()` + `setMaxPolyphony()`, **never** `initAudio()` - the latter awaits
     `initKabelsalat()` unconditionally, which hangs under `OfflineAudioContext`.
