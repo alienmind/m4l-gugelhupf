@@ -33,7 +33,6 @@ export function useReplRemote(
 	transport = true,
 ): void {
 	const [play] = useParam(surface, "play");
-	const wanted = transport && play ? 1 : 0;
 	/* eslint-disable react-hooks/rules-of-hooks */
 	const knobs = KNOB_IDS.map((id) => useParam(surface, id)[0]);
 	/* eslint-enable react-hooks/rules-of-hooks */
@@ -48,9 +47,22 @@ export function useReplRemote(
 		sendToWindow("repl", selector, value);
 	};
 
+	/** May a `play` that is already down start the Studio? Same latch, and the same
+	 *  reason, as the device engine's - see useStrudelEngine. */
+	const armed = useRef(true);
+
 	useEffect(() => {
-		send("set_play", wanted);
-	}, [wanted]);
+		if (!transport) {
+			armed.current = false;
+			send("set_play", 0);
+			return;
+		}
+		if (!armed.current) {
+			if (play) return;
+			armed.current = true;
+		}
+		send("set_play", play ? 1 : 0);
+	}, [transport, play]);
 
 	useEffect(() => {
 		knobs.forEach((value, i) => send(`set_${KNOB_IDS[i]}`, typeof value === "number" ? value : 0));
@@ -58,7 +70,9 @@ export function useReplRemote(
 
 	useEffect(() => {
 		const t = setTimeout(() => {
-			send("set_play", wanted, true);
+			// Whatever the latch above last decided - NOT the mount value, which was
+			// decided before the Studio's own pattern had come back from the set.
+			send("set_play", sent.current["set_play"] ?? 0, true);
 			knobs.forEach((value, i) => send(`set_${KNOB_IDS[i]}`, typeof value === "number" ? value : 0, true));
 		}, 3000);
 		return () => clearTimeout(t);

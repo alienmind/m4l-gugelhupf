@@ -57,6 +57,12 @@ export default function App() {
 	const owner = transportOwner(studioText);
 	const s = useStrudelRender(!declared, owner === "scratchpad");
 	const [play, setPlay] = useParam(surface, "play");
+	// One line per handover, in the Max console. Which engine holds the transport is
+	// otherwise invisible, and "nothing sounds" looks the same whether the handover
+	// never happened or the engine that took it failed to start.
+	useEffect(() => {
+		console.log(`[transport] ${owner} has it`);
+	}, [owner]);
 	const [showAbout, setShowAbout] = useState(false);
 
 	// The native transport panel behind the view switch - the MIDI device's mechanism.
@@ -135,6 +141,11 @@ export default function App() {
 					live={owner === "studio" ? !!play : s.live}
 					onRun={owner === "studio" ? () => setPlay(true) : s.run}
 					onStop={owner === "studio" ? () => setPlay(false) : s.hush}
+					title={
+						owner === "studio"
+							? "Play/Stop the STUDIO's pattern - it holds the transport while it has a pattern in it"
+							: "Play/Stop this page's scratchpad - it holds the transport while the Studio is empty"
+					}
 				/>
 				{/* Allowed while playing: the bounce takes superdough's context over for its
 				    duration, so playback goes quiet and resumes (useStrudelRender). */}
