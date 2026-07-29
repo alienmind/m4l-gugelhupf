@@ -32,34 +32,35 @@ as `copyPath()` in `@m4l-jweb/bridge`.
 
 ## Open Tasks
 
-### 1. TEST - one transport, one engine
+### 1. TEST - one transport, one engine, and the Studio saving again
 
 The Strudel device has two engines that both sound into the same track, and one `play`
 parameter used to start both, so the track carried the sum of the Studio's pattern and
-the device page's scratchpad. It is XOR now: `src/app/strudel/transport.ts` gives the
-transport to the Studio whenever the Studio's pattern has content, and to the scratchpad
-otherwise. The loser STANDS DOWN - it goes quiet without clearing `play`, because the
-parameter belongs to whichever engine is sounding.
+the device page's scratchpad. It is XOR now, and the owner is whoever STARTED LAST: Run
+in the device view claims the track for the scratchpad, evaluating in the Studio claims
+it back, and the choice is a saved slot (`engine`). The loser stands down - quiet,
+without clearing `play`, which belongs to whichever engine is sounding. ARCHITECTURE
+section 4k carries the two predicates that were tried in Live first and rejected.
 
-The predicate is the Studio's PATTERN and not whether its window is open. A window is
-shut to see the mixer and opened again a minute later, and the Studio's page sounds
-whether or not it is showing, so keying on visibility would mean the audio changed when
-a window was dragged. `wind.visible` is readable in the wrapper (it already polls it in
-`fitWindowPage`) if this ever needs revisiting.
+**A second bug fell out of the same Live session, and it was the bigger one.** The shim
+did not speak the state slot's `{"__value": ...}` envelope, so it ignored every slot it
+was sent, never marked itself restored, and therefore NEVER WROTE THE STUDIO'S PATTERN
+BACK. The `code` slot had been frozen at its default - the Studio has not been saving
+with the set. Fixed and pinned by `src/app/strudel/__tests__/repl-shim.test.ts`.
 
-**A handover does not inherit the press**, which the first build got wrong and Live
-caught: `play` is still down when ownership moves, so the scratchpad started on the
-empty pattern it held at that instant, went `live` on silence, and could not be started
-again (typing does not re-evaluate). Both sides latch now, and `run()` refuses an empty
-pattern. ARCHITECTURE section 4k has it.
+**The exact next test**, on `alienmind-gugelhupf`, in this order:
 
-**The exact next test:** on `alienmind-gugelhupf`, press Run with the Studio's default
-pattern in it - only the Studio sounds. Clear the Studio (the sound stops), type a
-pattern in the device view's scratchpad, press Run - only the scratchpad sounds. Type
-into the Studio again while the scratchpad plays - the scratchpad goes quiet within a
-second, and Run then starts the Studio. The device page posts `[transport] studio has
-it` / `[transport] scratchpad has it` on every handover, so the Max console says whether
-a failure is a handover that did not happen or an engine that did not start.
+1. Type a pattern in the Studio, save the set, reopen it - the pattern comes back (this
+   is the save regression, and it has to pass before anything else means much).
+2. Evaluate in the Studio - it sounds. Press Run in the device view with a pattern in the
+   scratchpad - the Studio stops and the scratchpad sounds, with the Studio's pattern
+   still in it.
+3. Evaluate in the Studio again - the scratchpad goes quiet and the Studio plays.
+4. Save on the scratchpad, reopen - Run plays the scratchpad, not the Studio.
+
+A page's `console.log` does NOT reach the Max console, so read the `sync_state engine`
+and `sync_state code` lines the wrapper posts instead - they are what say whether a claim
+or a save happened at all.
 
 ### 2. FEAT - Export straight into a Live clip
 

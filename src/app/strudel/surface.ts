@@ -6,8 +6,9 @@
  * remains is the transport pair - the macro-mappable Play/Stop and the native panel
  * that makes it clickable - plus the code slot and the three windows.
  */
-import { button, defineSurface, knobPool, window } from "@m4l-jweb/surface";
+import { button, defineSurface, knobPool, state, window } from "@m4l-jweb/surface";
 import { KNOB_POOL, codeSlot, helpQuerySlot, transportParams } from "../shared/surface";
+import { DEFAULT_OWNER } from "./transport";
 
 /**
  * THE SLIDER KNOBS. strudel.cc renders `slider(0.571, 0, 1)` as an inline widget; here
@@ -68,6 +69,13 @@ export default defineSurface({
 		 * page's own engine so it can draw and sound in its own right.
 		 */
 		miniCode: codeSlot(""),
+		/**
+		 * WHICH ENGINE LIVE'S TRANSPORT DRIVES - "studio" or "scratchpad", claimed by
+		 * whichever was started last, and saved so a set reopens playing the same one.
+		 * Both pages write it: the device view when Run is pressed, the Studio's shim
+		 * when the user evaluates there. See transport.ts.
+		 */
+		engine: state<string>({ default: DEFAULT_OWNER }),
 		/** What the caret is on, so the floating help can follow the typing. */
 		helpQuery: helpQuerySlot(),
 	},

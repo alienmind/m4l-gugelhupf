@@ -148,7 +148,47 @@ describe("m4l-shim", () => {
 		// survive a save, so the poll follows the buffer rather than the evaluate.
 		page.editor.code = 'note("e3")';
 		vi.advanceTimersByTime(1000);
-		expect(sent(page.outlets, "sync_state").pop()).toEqual(["sync_state", "code", JSON.stringify('note("e3")')]);
+		expect(sent(page.outlets, "sync_state").pop()).toEqual([
+			"sync_state",
+			"code",
+			JSON.stringify({ __value: 'note("e3")' }),
+		]);
+	});
+
+	/**
+	 * THE SLOT IS ENVELOPED, and this file has to speak that format by hand - nothing
+	 * bundles into it. It did not, once, and the failure was silent in the worst way:
+	 * the shim read `{"__value": ...}` as "not a string" and ignored every slot it was
+	 * sent, so it never marked itself restored and never wrote the pattern back. The
+	 * Studio stopped saving with the set and nothing said so.
+	 */
+	it("reads the enveloped slot Live actually sends", () => {
+		mount();
+		page.editor.code = "// whatever the REPL loaded itself";
+		page.inlets.state_code(JSON.stringify({ __value: 'note("c3")' }));
+		vi.advanceTimersByTime(1000);
+		expect(page.editor.setCode).toHaveBeenCalledWith('note("c3")');
+	});
+
+	it("still reads a set written before the envelope", () => {
+		mount();
+		page.editor.code = "// whatever the REPL loaded itself";
+		page.inlets.state_code(JSON.stringify('note("c3")'));
+		vi.advanceTimersByTime(1000);
+		expect(page.editor.setCode).toHaveBeenCalledWith('note("c3")');
+	});
+
+	it("escapes the spaces in a pattern, which Max would otherwise split on", () => {
+		mount();
+		page.inlets.state_code(JSON.stringify({ __value: "old" }));
+		page.editor.code = "old";
+		vi.advanceTimersByTime(1000);
+
+		page.editor.code = 's("bd  sd")'; // two spaces: one atom, or the pattern changes
+		vi.advanceTimersByTime(1000);
+		const [, , payload] = sent(page.outlets, "sync_state").pop() as string[];
+		expect(payload).not.toMatch(/ /);
+		expect(payload).toBe('{"__value":"s(\\"bd\\u0020\\u0020sd\\")"}');
 	});
 
 	it("does not write the slot again when nothing changed", () => {
@@ -160,11 +200,37 @@ describe("m4l-shim", () => {
 	});
 
 	it("turns the device's Play/Stop into evaluate and stop", () => {
+		// The shim WRAPS evaluate (to claim the transport), so the spy to assert on is
+		// the one the page had before mounting, not what `editor.evaluate` is now.
+		const evaluate = page.editor.evaluate;
 		mount();
 		page.inlets.set_play(1);
-		expect(page.editor.evaluate).toHaveBeenCalled();
+		expect(evaluate).toHaveBeenCalled();
 		page.inlets.set_play(0);
 		expect(page.editor.stop).toHaveBeenCalled();
+	});
+
+	/**
+	 * ONE TRACK, TWO ENGINES. The device page has a scratchpad engine of its own and
+	 * both sum into the same track, so exactly one may sound. The `engine` slot says
+	 * which, and starting is what claims it.
+	 */
+	it("claims the transport when the user evaluates here", () => {
+		mount();
+		page.editor.evaluate(); // the REPL's own play button, or Ctrl+Enter
+		expect(sent(page.outlets, "sync_state")).toContainEqual([
+			"sync_state",
+			"engine",
+			JSON.stringify({ __value: "studio" }),
+		]);
+	});
+
+	it("does not claim it when the evaluation is Live's transport arriving", () => {
+		// set_play is forwarded FROM the device page, which already knows who owns the
+		// transport. Claiming here would make the Studio steal it every time Live played.
+		mount();
+		page.inlets.set_play(1);
+		expect(sent(page.outlets, "sync_state").filter((m) => m[1] === "engine")).toEqual([]);
 	});
 
 	it("exposes the native dials as a SIGNAL, so a moving knob moves the sound", () => {
