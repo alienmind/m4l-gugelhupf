@@ -52,8 +52,9 @@ Two things it needs, both of which were silent when missing:
   side-effect free. `sideEffects: false` is read from the package.json of the package a
   module resolves *through*, and a generated file in `dist/` is inside no package - so
   rollup has to assume the barrel does something on import, keeps it whole, and every
-  page ships all 24 icons (+8.4 KB each). A `package.json` next to the barrel does not
-  help; the option does.
+  page ships all 24 icons (+8.4 KB each). Writing a `package.json` next to the barrel
+  looks like the fix and is not one - measured, it changes nothing; the option is what
+  rollup reads.
 - The name -> file map is **read out of lucide's real barrel**, not derived from the
   name. lucide ships aliases (`CircleChevronLeft` and `ChevronLeftCircle` are one file),
   and a PascalCase-to-kebab guess resolves those to files that do not exist.

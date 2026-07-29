@@ -88,16 +88,6 @@ function usedIcons(dir) {
 export function prebundleDeps() {
 	rmSync(OUT_DIR, { recursive: true, force: true });
 	mkdirSync(OUT_DIR, { recursive: true });
-	// `sideEffects: false`, and it is the whole point. lucide's own package declares it,
-	// but this barrel sits in dist/ - outside that package - and the nearest package.json
-	// going up is the repo root's, which declares nothing. Rollup then has to assume the
-	// barrel might do something on import, keeps it whole, and every page ships all the
-	// icons: measured at +8.4 KB on each of 17 pages before this file existed.
-	writeFileSync(
-		path.join(OUT_DIR, "package.json"),
-		JSON.stringify({ type: "module", sideEffects: false }, null, "\t") + "\n",
-	);
-
 	const barrel = lucideBarrel();
 	const dir = path.dirname(barrel);
 	const map = new Map();
