@@ -41,6 +41,12 @@ export default [
 		type: "instrument",
 		mode: "sample-browser",
 		chains: ["webaudio"],
+		// The same ring buffer the main device and the synth take. It is a [jweb~]
+		// property, not a superdough one: any page whose audio reaches the track
+		// through the webaudio chain underruns on the object default (~21 ms at
+		// 48 kHz), whatever produced the samples. A preview is the least sensitive
+		// place to spend 66 ms - nobody plays this device in time.
+		latency: 66,
 		unmatchedTo: "js",
 	},
 	{
@@ -64,6 +70,12 @@ export default [
 		type: "instrument",
 		mode: "drums-sampler",
 		chains: ["webaudio", "midiin"],
+		// Same ring buffer as the other webaudio devices. This one PAYS for it: it is
+		// played live from a keyboard or a sequencer, and 66 ms on a drum hit is
+		// audible where it is not on a sustained tone. Correct it with Track Delay
+		// (doc/README.md); drop it back if the trade turns out to be the wrong way
+		// round for percussion.
+		latency: 66,
 		unmatchedTo: "js",
 	},
 	{
