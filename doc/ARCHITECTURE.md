@@ -448,46 +448,46 @@ Facts this shape rests on, all measured in Live (2026-07-22):
   mid-DSP survives - `rendermode: 0` did not). Not pursued: the loose setting is the one
   that keeps the pattern clean, and that is the setting that matters more.
 
-**ONE TRANSPORT, ONE ENGINE - the two never sound together.** The device page has an
-engine of its own (the scratchpad, `miniCode`) and the Studio has the real one (`code`),
-and both `[jweb~]` pairs are summed into the same track. `play` is a single Live
-parameter, so starting it used to start both and the track carried the sum of two
-patterns. The `engine` state slot says which one it drives, and the one that does not
-have it STANDS DOWN - `useStrudelEngine`'s `transport: false` goes quiet without writing
-`play`, since clearing it would stop the engine that legitimately has it.
+**ONE ENGINE, TWO VIEWS OF ONE PATTERN.** The Studio makes all of this device's sound.
+The device page has no engine at all: it edits the same `code` slot, shows the same text,
+and its Run sends `evaluate` to the Studio. `useStrudelEngine` is still mounted there with
+`transport: false`, which makes it silent - it is what reads Live's tempo, tracks
+beats-per-cycle and parses the text for the bounce, and it never starts a worker.
 
-**Ownership is CLAIMED BY STARTING, not derived.** Run in the device view claims it for
-the scratchpad and then runs; evaluating in the Studio claims it back (the shim wraps
-`editor.evaluate`, so its play button, Ctrl+Enter and its pattern browser all count, while
-an evaluation caused by Live's own transport arriving as `set_play` claims nothing). The
-slot saves, so a set reopens on the engine it was left on.
+That is the third answer to "who is playing", and the first two are why it is the right
+one. The device page used to run its own engine on a second slot (`miniCode`, the
+"scratchpad"), so `play` started both and the track carried the sum of two patterns. Then
+ownership was **derived from whether the Studio's pattern was empty** - which made the
+only route to the scratchpad "delete your music", and in a set holding the default
+pattern the scratchpad could never be heard at all. Then it was **claimed by whoever
+started last**, which worked but left the device with two engines, two texts and a
+handover to get wrong (an engine gaining the transport mid-press would start on whatever
+it held at that instant - nothing, for a scratchpad about to be typed into - and no
+keystroke re-evaluates, so it believed it was playing silence). Deleting the second engine
+removes the question instead of answering it. **Window visibility was never a candidate**:
+a window is shut to see the mixer, and the Studio's page sounds with its window closed, so
+the audio would change when a window was dragged.
 
-Two earlier rules were tried in Live and are not what ships. **Deriving it from whether
-the Studio's pattern was empty** made the only route to the scratchpad "delete your
-music", and in a set whose Studio held the default pattern the scratchpad could never be
-heard at all. **Window visibility** is worse: a window is shut to see the mixer, and the
-Studio's page sounds with its window closed, so the audio would change when a window was
-dragged (`wind.visible` is readable in the wrapper, `fitWindowPage` polls it, if that is
-ever wanted for something else).
+**What it cost, deliberately:** a `scope()` typed in the device view can no longer draw
+anything. It only ever worked because that page had an engine of its own, and `[jweb~]`
+has no signal inlet, so the device page cannot see the Studio's audio at all - the
+Visualizer's `[peakamp~]` tap is what remains. There is also no fallback engine: if the
+Studio's page fails to boot, the device is silent.
 
-**A handover does not inherit the press.** `play` is still down when ownership moves, so
-an engine that simply started on it would start on whatever it held at that instant -
-nothing, for a scratchpad about to be typed into - and no keystroke re-evaluates, so it
-would be an engine that believed it was playing silence. Both sides latch: an engine that
-gains the transport waits for `play` to be released and pressed again, while one holding
-it at mount still starts, so a set saved playing comes back playing. `run()` also refuses
-an empty pattern rather than going `live` on silence, and an empty scratchpad claims
-nothing - taking the track from a playing Studio to run silence is the worst outcome
-available.
+**Run cannot ride `play`.** It is a Live PARAMETER, so setting it to a value it already
+holds sends nothing - and pressing Run after an edit, while the pattern plays, is exactly
+when a re-evaluation is wanted. The device view sends its own `evaluate` message to the
+Studio, after the keystroke that wrote the slot, and both leave the page in order.
 
 **A page's `console.log` does not reach the Max console**, so it is useless as a
 diagnostic here: what a page needs the console to say has to go out as a message the
 wrapper `post`s.
 
-EXPORT is unaffected and bounces the DEVICE PAGE's pattern whichever engine is sounding,
-because that is the only one that compiles in this page's scope. Bouncing the Studio's
-is doc/TODO.md items 3 and 3d - it needs a renderer in strudel itself and a save a
-window page is allowed to make.
+EXPORT still renders in the DEVICE PAGE, offline, and never disturbs the music - the
+Studio is a different Chromium context with its own superdough singletons. It is the same
+pattern TEXT, but compiled in this page's scope, so a pattern leaning on something only
+the Studio's runtime provides bounces differently. Fixing that means a renderer in strudel
+itself: doc/TODO.md items 3 and 3d.
 
 `src/app/strudel/repl-shim/m4l-shim.js` is the only line of ours inside that app: it
 arms the audio (the REPL waits for a `mousedown` that a hidden window never gets),

@@ -1,12 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import {
-	registerSynthSounds,
-	samples,
-	setGainCurve,
-	superdough,
-	initAudio,
-	getAudioContext,
-} from "superdough";
+import { registerSynthSounds, samples, setGainCurve, initAudio, getAudioContext } from "superdough";
 import { copyMessage, copyPath, onDeviceFolder, saveToFile } from "@m4l-jweb/bridge";
 
 import { bootScope, compile } from "../../max/shared/engine.mjs";
@@ -18,42 +11,27 @@ import { sampleCacheStatus } from "../../lib/sampleCache";
 import { SAMPLE_MAPS, loadSampleMaps } from "../../lib/sampleMaps";
 import { useStrudelEngine } from "../shared/useStrudelEngine";
 import { useSliderKnobs } from "../shared/useSliderKnobs";
-import surface from "./surface";
+import surface, { INITIAL_TEXT } from "./surface";
 
 /**
- * The native Web Audio sink for the Strudel device.
+ * The Strudel device's editor and its bounce - NOT an engine.
  *
- * TWO CLOCKS, AND WHY delayMs IS THE WRONG BRIDGE BETWEEN THEM. The worker schedules
- * against Live's transport and hands each hap a `delayMs` measured from the beat
- * position of the TICK it was queried in. That works for the MIDI devices because Max's
- * [pipe] applies the delay on Max's own scheduler - the number never leaves the clock it
- * was computed on. Here it does: by the time the event has crossed postMessage and
- * React, an unknown slice of that delay is already spent, and `currentTime + delayMs`
- * quietly means something later than it says.
+ * THIS PAGE MAKES NO SOUND. The Studio window is the device's engine (ARCHITECTURE 4k):
+ * it is the real strudel.cc, it runs from device load whether or not its window is open,
+ * and its `[jweb~]` is the track. This page edits the SAME `code` slot and shows the
+ * same pattern, so it is a second view of one thing rather than a second instrument.
  *
- * The first attempt clamped a late event to "now" so superdough would not drop it (it
- * refuses to schedule in the past). That is worse than dropping: once the clocks drift
- * past the lookahead window EVERY event clamps to the same instant, so a bar's worth of
- * notes fires simultaneously - which is exactly the reported symptom, audio that starts,
- * collapses, spikes the CPU and distorts, then loosely resumes.
+ * It used to have an engine of its own, on a separate `miniCode` slot - the "scratchpad".
+ * Two engines summing into one track meant one transport starting both, and three
+ * attempts at giving the transport to exactly one of them (see the drawer) were all
+ * worse than deleting the second engine. What went with it: a `scope()` typed here can
+ * no longer draw, because `[jweb~]` has no signal inlet and this page therefore cannot
+ * see the Studio's audio - the Visualizer's `[peakamp~]` tap is what remains.
  *
- * So do not convert a delay at all. Anchor the pattern's own timeline to the audio
- * clock ONCE, and derive every event from it: `t = anchorTime + (cycle - anchorCycle) /
- * cps`. Spacing then comes from the pattern (exact, jitter-free) rather than from
- * message arrival times, and superdough is handed strictly increasing future times.
- *
- * The anchor is re-taken only when it is genuinely meaningless: the first event, a
- * tempo change, or a computed time that has fallen behind or run absurdly ahead -
- * transport start/stop, a loop jump, a scrub, or the page being throttled. Each re-anchor
- * is a one-off timing seam, so they are counted and reported rather than hidden.
+ * `useStrudelEngine` is still mounted, with `transport: false` so it never sounds. It is
+ * what reads Live's tempo, tracks beats-per-cycle and parses the text; the bounce below
+ * needs all three, and none of them make noise.
  */
-/** How far ahead of `currentTime` a fresh anchor places its first event. Comfortably
- *  inside the worker's 150 ms lookahead, comfortably past message jitter. */
-const ANCHOR_LEAD_S = 0.08;
-/** Below this much lead, the mapping has fallen behind the audio clock: re-anchor. */
-const MIN_LEAD_S = 0.005;
-/** Further ahead than this and the mapping is nonsense (a jump backwards): re-anchor. */
-const MAX_AHEAD_S = 2;
 
 /** Longest bounce we render, in cycles - a pattern whose period does not settle is
  *  capped here rather than rendering forever. */
@@ -71,22 +49,9 @@ export function useStrudelRender(
 	 * then, and a second writer just renames its dials from under it.
 	 */
 	describeKnobs = true,
-	/**
-	 * Whether the SCRATCHPAD is the engine Live's transport drives. False whenever the
-	 * Studio holds a pattern - the two engines share one track and one `play`, so
-	 * exactly one of them sounds (app/strudel/transport.ts).
-	 *
-	 * Export is unaffected: it bounces THIS page's pattern whether or not this page is
-	 * the one currently sounding, because this is the only pattern the device page can
-	 * render in its own scope. See exportAudio.
-	 */
-	transport = true,
 ) {
 	const [samplesNote, setSamplesNote] = useState<string | null>("Loading samples...");
 	const initialized = useRef(false);
-	/** Pattern time pinned to audio time: events derive from this, not from delayMs. */
-	const anchor = useRef<{ cycle: number; time: number; cps: number } | null>(null);
-	const reanchors = useRef({ count: 0, lastLogged: 0 });
 	const [exporting, setExporting] = useState(false);
 	const [exportNote, setExportNote] = useState<string | null>(null);
 	/** Where the export lands, as the wrapper resolved it. The page cannot know its own
@@ -94,10 +59,10 @@ export function useStrudelRender(
 	const [folder, setFolder] = useState<string | null>(null);
 	/** The last file this device wrote, so the copy button can offer its full path. */
 	const [exported, setExported] = useState<string | null>(null);
-	/** True while a bounce holds superdough's context. A ref, not the `exporting` state:
-	 *  the sink closes over its render's values and must see the flag the instant it flips. */
-	const bouncing = useRef(false);
 
+	// The sounds the BOUNCE needs. Nothing here plays: superdough is loaded in this page
+	// only so an offline render can resolve `s("bd")` and the synth waveforms, and the
+	// sample maps are fetched for the same reason.
 	useEffect(() => {
 		if (initialized.current) return;
 		initialized.current = true;
@@ -124,53 +89,15 @@ export function useStrudelRender(
 
 	const engine = useStrudelEngine({
 		surface: surface as any,
-		// The device view's engine is the SCRATCHPAD's, not the music's: the pattern
-		// lives in the Studio and in the `code` slot, and this one starts EMPTY and
-		// stays empty unless somebody types a scope or a control snippet into it.
-		// Sharing the slot meant hearing both engines at once, which is what it did.
-		slot: "miniCode",
-		transport,
-		initialText: "",
+		// THE SAME SLOT THE STUDIO EDITS. One pattern, two views of it - this page is
+		// not a second instrument, and there is no second text to keep in step.
+		slot: "code",
+		// Never sounds. The Studio is the engine; this mount is for the tempo, the
+		// beats-per-cycle tracking and the parse that the bounce needs.
+		transport: false,
+		initialText: INITIAL_TEXT,
 		ctx: EMPTY_CTX,
 		liveScale: "C4:major",
-		superdoughSink: (ev) => {
-			if (!initialized.current) return;
-			// A bounce owns superdough's singleton context for its duration (renderCycles).
-			// A live hap scheduled into that OfflineAudioContext is the "cannot connect to
-			// an AudioNode belonging to a different audio context" failure, so playback
-			// stands down for the render and re-anchors when it comes back.
-			if (bouncing.current) return;
-			const ac = getAudioContext();
-			const now = ac.currentTime;
-			let a = anchor.current;
-
-			// A tempo change re-scales the whole mapping, so the old anchor no longer
-			// describes this pattern's timeline.
-			if (a && a.cps !== ev.cps) a = null;
-
-			let t = a ? a.time + (ev.cycle - a.cycle) / ev.cps : now + ANCHOR_LEAD_S;
-
-			// Behind the audio clock, or absurdly ahead: the thread between pattern time
-			// and audio time is lost (start/stop, loop jump, scrub, a throttled page).
-			// Re-pin it here rather than firing a pile-up at "now".
-			if (!a || t < now + MIN_LEAD_S || t > now + MAX_AHEAD_S) {
-				t = now + ANCHOR_LEAD_S;
-				anchor.current = { cycle: ev.cycle, time: t, cps: ev.cps };
-				if (a) {
-					const s = reanchors.current;
-					s.count++;
-					const wall = Date.now();
-					if (wall - s.lastLogged > 5000) {
-						s.lastLogged = wall;
-						console.warn(
-							`[superdough-sink] re-anchored ${s.count}x - transport jump, tempo change or clock drift`,
-						);
-					}
-				}
-			}
-
-			superdough(ev.value, t, ev.durMs / 1000, ev.cps, ev.cycle);
-		},
 	});
 
 	// The library's, from this device's files.ts declaration - it arrives at ui_ready,
@@ -195,44 +122,26 @@ export function useStrudelRender(
 	// Every slider() in the pattern, on a native S1..S8 dial.
 	const sliders = useSliderKnobs(surface, engine.sliderSpecs, engine.text, engine.setSliderValues, describeKnobs);
 
-	// Stopping ends the timeline. Without this the next Run maps its first cycle against
-	// an anchor from minutes ago, which is guaranteed to be behind the audio clock - one
-	// wasted re-anchor, and a first note that lands late.
-	useEffect(() => {
-		if (!engine.live) anchor.current = null;
-	}, [engine.live]);
-
 	/**
-	 * Export the current pattern to a WAV next to the device (TODO item 3).
+	 * Export the current pattern to a WAV next to the device.
 	 *
-	 * A one-shot BOUNCE, not the retired loop pipeline: compile fresh on this thread
-	 * (the worker's pattern lives in another one), find the true loop period, render
-	 * it offline with the real superdough, and saveToFile the WAV. The file lands
-	 * flat in the device folder - the same drag-out handle the sample browser writes.
+	 * A one-shot BOUNCE: compile fresh on this thread, find the true loop period, render
+	 * it offline with the real superdough, and saveToFile the WAV. The file lands flat in
+	 * the device folder - the same drag-out handle the sample browser writes.
 	 *
-	 * IT TAKES THE ENGINE OVER FOR THE DURATION, and that is structural. superdough's
-	 * audio context and output controller are MODULE-LEVEL singletons (audioContext.mjs,
-	 * superdough.mjs) and renderCycles swaps both to an OfflineAudioContext; the node
-	 * pool is shared across contexts on top of that. Live playback drives the same
-	 * singletons, so without a handover a live hap gets scheduled into the offline
-	 * context - "cannot connect to an AudioNode belonging to a different audio context",
-	 * intermittently, depending on what the pool happens to be holding. `bouncing` stands
-	 * the sink down for the render; renderCycles clears the pool on both sides and puts
-	 * the live context back. Playback therefore goes quiet for the bounce and resumes.
+	 * It does not disturb the music. The Studio is a different Chromium context with its
+	 * own superdough singletons, so swapping this page's context for an OfflineAudioContext
+	 * is invisible to the audio on the track. What it cannot do is bounce what the Studio
+	 * would actually play: this page compiles the same TEXT in its own scope, so a pattern
+	 * leaning on something only the Studio's runtime provides renders differently or not at
+	 * all. The fix is a renderer in strudel itself - doc/TODO.md item 3.
 	 */
 	const exportAudio = useCallback(async () => {
 		if (exporting) return;
-		// The scratchpad is empty in its normal state, and the Studio's pattern is the
-		// one playing then - so an Export with nothing here would bounce silence and
-		// look like a broken renderer. Say which pattern this button renders instead.
 		if (!engine.text.trim()) {
-			setExportNote("Nothing to export - this bounces the scratchpad's pattern, not the Studio's");
+			setExportNote("Nothing to export - the pattern is empty");
 			return;
 		}
-		bouncing.current = true;
-		// The seam is unavoidable: pattern time has moved on while the sink was down, so
-		// the next event must re-pin rather than derive from a stale anchor.
-		anchor.current = null;
 		setExporting(true);
 		setExportNote("Compiling...");
 		try {
@@ -258,8 +167,6 @@ export function useStrudelRender(
 		} catch (e) {
 			setExportNote("Export failed: " + (e instanceof Error ? e.message : String(e)));
 		} finally {
-			bouncing.current = false;
-			anchor.current = null;
 			setExporting(false);
 		}
 	}, [exporting, engine.tempo, engine.beatsPerCycle, engine.text, engine.noteCtx]);

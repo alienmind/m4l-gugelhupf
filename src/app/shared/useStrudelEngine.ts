@@ -107,23 +107,18 @@ export interface EngineOptions {
 	surface: Surface<typeof transportParams>;
 	/** The pattern the device opens with - its own idiom, not a shared one. */
 	initialText: string;
+	/** Which state slot holds this engine's text. Defaults to `code`, and every device
+	 *  now uses it - the Strudel device's second slot went with its second engine. */
+	slot?: "code";
 	/**
-	 * Which state slot holds this engine's text. Defaults to `code`.
+	 * Whether Live's transport drives this engine. Default true; false makes the mount
+	 * SILENT - it never runs, and it goes quiet if it somehow was running.
 	 *
-	 * The Strudel device has TWO texts now: the Studio's pattern, which is the music
-	 * and lives in `code`, and the device view's scratchpad, which is where a scope
-	 * or a control snippet goes. They must not share a slot - one would overwrite the
-	 * other on every keystroke - so the device view names its own.
-	 */
-	slot?: "code" | "miniCode";
-	/**
-	 * Whether this engine is the one Live's transport drives. Default true - only the
-	 * Strudel device has a second engine to lose the transport to (app/strudel/transport.ts).
-	 *
-	 * False does NOT mean the `play` parameter stops working: the parameter is Live's,
-	 * shared, and automation must keep writing it. It means this engine stands down -
-	 * it goes quiet and stays quiet - while the other one sounds. Standing down never
-	 * clears `play`, because that would stop the engine that legitimately owns it.
+	 * The Strudel device is the one that passes false. Its sound is the Studio window's,
+	 * and this hook is mounted there only for the tempo, the beats-per-cycle tracking
+	 * and the parse - see app/strudel/useStrudelRender.ts. Standing down never clears
+	 * `play`: the parameter is Live's, automation keeps writing it, and it belongs to
+	 * whatever is actually making sound.
 	 */
 	transport?: boolean;
 	/**
@@ -586,12 +581,6 @@ export function useStrudelEngine(opts: EngineOptions): EngineState {
 		// The voice sink is exempt: its bare tokens are SAMPLE NAMES, not pitches, so the
 		// note-mini parser's "errors" (it cannot resolve `bd`) do not apply - asSampleCode
 		// wraps the raw text in s(), and an unknown sound is reported by the sink, not here.
-		// NO `transport` GATE HERE. A page that calls run() is claiming the transport in
-		// the same event (App.tsx's runScratchpad), and this callback still closes over
-		// the ownership of the render it was made in - so refusing here would refuse the
-		// very press that was taking ownership. Losing the transport is what silences an
-		// engine, and that is the effect below.
-		//
 		// An empty pattern must not go LIVE. It makes no sound, and `live` is what the
 		// transport effect and the Run button read - a silent engine that believes it is
 		// playing cannot be started, only stopped and started again.
@@ -640,35 +629,13 @@ export function useStrudelEngine(opts: EngineOptions): EngineState {
 		setPlayParam(false);
 	}, [standDown, setPlayParam]);
 
-	/**
-	 * May a `play` that is ALREADY DOWN start this engine?
-	 *
-	 * True at mount, so a set saved while playing comes back playing. False from the
-	 * moment this engine loses the transport, and true again only once `play` has been
-	 * released - so an engine that gains the transport mid-press waits for the next
-	 * press instead of inheriting the one the other engine was started by.
-	 */
-	const armed = useRef(true);
-
 	useEffect(() => {
-		// Ownership can flip while this engine is sounding - the Studio's pattern is
-		// typed into an empty slot, or cleared out of a full one - so silence it here
-		// rather than only at the next transport change.
+		// A silent mount. `play` still travels - it drives whatever this device's sound
+		// actually is - it just does not start a worker here.
 		if (!transport) {
-			armed.current = false;
 			if (live) standDown();
 			return;
 		}
-		// INHERITING THE PRESS IS THE BUG THIS PREVENTS. The scratchpad takes over from
-		// an emptied Studio while `play` is still on, so it would start on whatever it
-		// holds at that instant - nothing, since the pattern is typed afterwards. It
-		// would then be an engine that believes it is playing silence, and no keystroke
-		// re-evaluates (that is what Run is for), so nothing could be heard again.
-		if (!armed.current) {
-			if (playParam) return;
-			armed.current = true;
-		}
-
 		if (playParam && !live) run();
 		else if (!playParam && live) hush();
 	}, [transport, playParam, live, run, hush, standDown]);

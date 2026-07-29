@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Activity, ClipboardCopy, Code, SlidersVertical } from "lucide-react";
+import { sendToWindow } from "@m4l-jweb/bridge";
 import { useNativePanel, useParam, useStateSync, useWindow } from "@m4l-jweb/surface/react";
 import { PatternEditor } from "../shared/PatternEditor";
 import { AboutPanel } from "../shared/AboutPanel";
@@ -12,7 +13,6 @@ import { Visualizer } from "./Visualizer";
 import { useReplKnobs } from "./useReplKnobs";
 import { useReplRemote } from "./useReplRemote";
 import { useStrudelRender } from "./useStrudelRender";
-import { transportOwner } from "./transport";
 import surface from "./surface";
 
 /**
@@ -23,7 +23,7 @@ import surface from "./surface";
 const VIEWS = [
 	{ id: "visual", icon: Activity, title: "Visualizer: what the Studio is playing" },
 	{ id: "knobs", icon: SlidersVertical, title: "Controls: the pattern's faders, full size" },
-	{ id: "code", icon: Code, title: "Code: a scratchpad for seeing and controlling" },
+	{ id: "code", icon: Code, title: "Code: the pattern, the same one the Studio holds" },
 ] as const;
 
 type ViewId = (typeof VIEWS)[number]["id"];
@@ -44,32 +44,25 @@ type ViewId = (typeof VIEWS)[number]["id"];
  */
 export default function App() {
 	// BEFORE useStrudelRender, and that order is load-bearing: whether the Studio has
-	// declared any faders decides whether this page's scratchpad is allowed to name the
-	// S1..S8 dials. Two engines, one pool - see useSliderKnobs' `describe`.
+	// declared any faders decides whether this page is allowed to name the S1..S8 dials.
+	// Two writers, one pool - see useSliderKnobs' `describe`.
 	const { faders, declared } = useReplKnobs();
-	/**
-	 * ONE TRANSPORT, ONE ENGINE. Both pages sound into the same track, so `play`
-	 * starting both meant the track carried the sum of the Studio's pattern and the
-	 * scratchpad's. Whichever was started LAST holds it - see transport.ts.
-	 */
-	const [engineSlot, setEngineSlot] = useStateSync(surface, "engine");
-	const owner = transportOwner(engineSlot);
-	const s = useStrudelRender(!declared, owner === "scratchpad");
+	const s = useStrudelRender(!declared);
 	const [play, setPlay] = useParam(surface, "play");
 
 	/**
-	 * Run, in the device view, is the SCRATCHPAD's - the Studio has its own. So it
-	 * claims the transport first and starts second, in one event: the state store
-	 * applies a write optimistically, so `s.run()` in the same handler already sees
-	 * itself as the owner and does not stand down on the next render.
+	 * RUN IS THE STUDIO'S, because the Studio is the only engine. This page edits the
+	 * same `code` slot and shows the same pattern; it makes no sound of its own, so
+	 * "run" here means: make sure the transport parameter is on, and tell the Studio to
+	 * evaluate what it now holds.
 	 *
-	 * An empty scratchpad claims NOTHING. Taking the transport away from a playing
-	 * Studio to run silence is the worst outcome available here.
+	 * Both messages travel out of this page in order - the keystroke that wrote the slot
+	 * has already left by the time the evaluate does - so the Studio evaluates the text
+	 * that is on screen here, not the one before it.
 	 */
-	const runScratchpad = () => {
-		if (!s.text.trim()) return s.run(); // reports "nothing to run", changes no state
-		setEngineSlot("scratchpad");
-		s.run();
+	const run = () => {
+		setPlay(true);
+		sendToWindow("repl", "evaluate", 1);
 	};
 	const [showAbout, setShowAbout] = useState(false);
 
@@ -110,16 +103,16 @@ export default function App() {
 	};
 	// Live's transport and the eight native dials reach the DEVICE, never a floating
 	// window - so the device view passes them on to the REPL's page.
-	useReplRemote(owner === "studio");
+	useReplRemote();
 
 	if (showAbout) {
 		// RENDER HEALTH, debug-only
-		const phase = s.status.phase === "idle" && !s.live ? "Ready - Run plays the pattern" : s.status.message;
+		const phase = s.status.phase === "idle" ? "Ready - Run evaluates in the Studio" : s.status.message;
 		const debug =
 			`${phase}\n` +
 			`${s.status.phase}` +
 			` / ${s.beatsPerCycle} beat${s.beatsPerCycle === 1 ? "" : "s"}/cyc` +
-			` / bpm ${Math.round(s.tempo)} / ${s.playing ? "play" : "stop"} @ ${s.beats.toFixed(1)}`;
+			` / bpm ${Math.round(s.tempo)} / ${play ? "play" : "stop"}`;
 		return (
 			<AboutPanel
 				amxdBuild={s.amxdBuild}
@@ -141,29 +134,12 @@ export default function App() {
 					onClick={() => setShowAbout(true)}
 					className="shrink-0 text-xs font-semibold tracking-tight hover:text-primary transition-colors cursor-pointer"
 				>Gugelhupf</button>
-				{/* The transport is Live's parameter, and it drives whichever engine owns
-				    it. When the Studio does, this page has no `live` of its own to show -
-				    the parameter is the only thing that knows, so read it directly. */}
-				{/* Run is the SCRATCHPAD's and always claims the transport for it; Stop
-				    stops whatever is playing, which is the Studio while it holds it. */}
-				<RunButton
-					className="ml-auto"
-					live={owner === "studio" ? !!play : s.live}
-					onRun={runScratchpad}
-					onStop={owner === "studio" ? () => setPlay(false) : s.hush}
-					title={
-						owner === "studio"
-							? "The STUDIO is playing. Stop it here, or press Run to hand the track to this page's scratchpad."
-							: "Run this page's scratchpad - it has the track. The Studio takes it back when you evaluate there."
-					}
-				/>
-				{/* Allowed while playing: the bounce takes superdough's context over for its
-				    duration, so playback goes quiet and resumes (useStrudelRender). */}
-				<ExportButton
-					onExport={s.exportAudio}
-					busy={s.exporting}
-					title="Export: render THIS PAGE's pattern to a WAV next to the device, then drag it into a track. The Studio's own pattern is not bounced - it renders in its own runtime, not this one."
-				/>
+				{/* The sound is the Studio's, and this page cannot see inside it - so the
+				    transport PARAMETER is the only thing that knows whether it is playing. */}
+				<RunButton className="ml-auto" live={!!play} onRun={run} onStop={() => setPlay(false)} />
+				{/* Allowed while playing: the bounce renders offline, in this page, and
+				    never touches the Studio's audio. */}
+				<ExportButton onExport={s.exportAudio} busy={s.exporting} />
 				{/* The local strudel.cc, in its own window, playing straight into the track. */}
 				<Button onClick={openStudio} variant="ghost" title="Open the local strudel.cc - the full REPL, playing into this track">
 					REPL
@@ -207,7 +183,7 @@ export default function App() {
 							value={s.text}
 							onChange={s.setText}
 							onCaret={(caret) => setHelpQuery(tokenAtCaret(s.text, caret))}
-							onRun={s.run}
+							onRun={run}
 							spans={[]}
 							invalid={Boolean(error)}
 						/>

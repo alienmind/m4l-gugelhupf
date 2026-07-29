@@ -569,3 +569,39 @@ Method note: none of these could be told apart from inside the page. `outputLate
 sits upstream of the `[jweb~]` ring buffer, so the console's `drift` numbers looked
 identical across all four while only `latency` mattered. A sustained tone and the ear
 were the instrument that resolved it; a dense pattern hid the dropouts entirely.
+
+## Two engines on one track, and three ways to say which one plays (2026-07-30)
+
+The device page ran its own Strudel engine on its own slot (`miniCode`, the
+"scratchpad") while the Studio window ran the real one on `code`. Both `[jweb~]` pairs
+sum into the same track and `play` is ONE Live parameter, so pressing it started both and
+the track carried the sum of two patterns. Three answers were tried before the question
+was deleted:
+
+- **The Studio's pattern decides.** The Studio owns the transport when its pattern has
+  content, the scratchpad when it is empty. Measured in Live: the only way to hear the
+  scratchpad is to DELETE the music, and in a set whose Studio holds the default pattern
+  the scratchpad can never be heard at all. It also could not be tested, because of the
+  envelope bug below.
+- **Whoever started last owns it**, in a saved slot, claimed by pressing Run here or
+  evaluating there. This works, and it shipped for one commit. It still leaves two
+  engines, two texts and a handover with an edge: `play` is still down when ownership
+  moves, so the engine taking it starts on whatever it holds at that instant - nothing,
+  for a scratchpad about to be typed into - and no keystroke re-evaluates, so it sits
+  believing it is playing silence.
+- **The window's visibility.** Never built. A window is shut to see the mixer and opened
+  again a minute later, and the Studio's page sounds with its window closed, so the audio
+  would change for a UI gesture. Max has no open/close event either - `wind.visible` is a
+  500 ms poll in `fitWindowPage`.
+
+**What shipped is one engine.** The device page's was deleted and the device view now
+edits the same `code` slot the Studio does. A `scope()` in the device view went with it
+and is not coming back: `[jweb~]` has no signal inlet, so that page cannot see the
+Studio's audio.
+
+**The bug underneath all of it.** The shim did not speak the state slot's
+`{"__value": ...}` envelope, so it discarded every slot it was sent, never marked itself
+restored, and never wrote the Studio's pattern back - the `code` slot had been frozen at
+its default and the Studio was not saving with the set. It presented as a transport bug
+for two rounds. The log said it in one line: no `sync_state code`, ever. A wire format
+repeated by hand in a file that cannot import needs a test that reads the real bytes.

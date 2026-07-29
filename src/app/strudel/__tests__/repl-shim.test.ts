@@ -200,37 +200,23 @@ describe("m4l-shim", () => {
 	});
 
 	it("turns the device's Play/Stop into evaluate and stop", () => {
-		// The shim WRAPS evaluate (to claim the transport), so the spy to assert on is
-		// the one the page had before mounting, not what `editor.evaluate` is now.
-		const evaluate = page.editor.evaluate;
 		mount();
 		page.inlets.set_play(1);
-		expect(evaluate).toHaveBeenCalled();
+		expect(page.editor.evaluate).toHaveBeenCalled();
 		page.inlets.set_play(0);
 		expect(page.editor.stop).toHaveBeenCalled();
 	});
 
 	/**
-	 * ONE TRACK, TWO ENGINES. The device page has a scratchpad engine of its own and
-	 * both sum into the same track, so exactly one may sound. The `engine` slot says
-	 * which, and starting is what claims it.
+	 * This page is the device's ONLY engine, so the device view's Run means "evaluate
+	 * here". It cannot ride `set_play`: that is a Live parameter and sends nothing when
+	 * it is already on, which is exactly when a re-evaluation after an edit is wanted.
 	 */
-	it("claims the transport when the user evaluates here", () => {
-		mount();
-		page.editor.evaluate(); // the REPL's own play button, or Ctrl+Enter
-		expect(sent(page.outlets, "sync_state")).toContainEqual([
-			"sync_state",
-			"engine",
-			JSON.stringify({ __value: "studio" }),
-		]);
-	});
-
-	it("does not claim it when the evaluation is Live's transport arriving", () => {
-		// set_play is forwarded FROM the device page, which already knows who owns the
-		// transport. Claiming here would make the Studio steal it every time Live played.
+	it("re-evaluates on demand, even while the transport is already on", () => {
 		mount();
 		page.inlets.set_play(1);
-		expect(sent(page.outlets, "sync_state").filter((m) => m[1] === "engine")).toEqual([]);
+		page.inlets.evaluate(1);
+		expect(page.editor.evaluate).toHaveBeenCalledTimes(2);
 	});
 
 	it("exposes the native dials as a SIGNAL, so a moving knob moves the sound", () => {
