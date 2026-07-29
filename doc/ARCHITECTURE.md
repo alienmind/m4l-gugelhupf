@@ -204,11 +204,15 @@ upstream in 1.3.0): the build derives the chain, and the packaged wrapper sends
 `device_folder` itself. `wrapper/device.ts` has no `sendFolder()` any more, and the
 manifest entries list no `download`.
 
-Where a device writes is still its own business, and the copy affordance must agree with
-it: the sample browser downloads into a `samples/` subfolder and offers that path, the
-exporters write flat into the device folder and offer that. A path offered for a folder
-nobody created is not a no-op, it is an OS error dialog - which is why the browser's
-button still waits for a first download while the exporters' do not.
+Every device writes FLAT into its own folder, and not by preference. A save's `.part` is
+written by `[js]`'s `File` and placed by `[maxurl]`, and the two resolve a subdirectory
+to different places, so a destination with a separator in it fails the place with `-1
+bytes` - after the `.part` has been written and size-checked, which is what makes it look
+like a save that nearly worked. `localPath()` (`src/lib/samples.ts`) returned
+`samples/<pack>/<name>_<n>.wav` and every one of the browser's downloads had been failing
+there; it folds the pack into the filename now. The copy affordance follows: each device
+offers the device folder, live from `ui_ready`, because that is the one folder that
+exists before anything has been written into it.
 
 **Rendering while playing: superdough is a singleton, so a bounce is a handover.**
 `getAudioContext()`, the output controller and the node pool are all module-level in

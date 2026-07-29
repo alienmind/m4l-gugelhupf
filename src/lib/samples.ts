@@ -206,6 +206,12 @@ export function withDeadline<T>(p: Promise<T>, ms: number, label: string): Promi
  * device, and a real install has spaces in that path ("Ableton Library"), which a Max
  * message would split into atoms.
  *
+ * FLAT, with the pack folded into the filename. A save's destination cannot be a
+ * subdirectory at all: the wrapper writes the `.part` through `[js]`'s `File` and
+ * places it through `[maxurl]`, and the two resolve `samples/x.wav` to different
+ * places, so the place finds nothing and reports `-1 bytes`. This wrote to
+ * `samples/<pack>/` for a long time and every download failed at that last step.
+ *
  * The extension is carried over from the URL, not assumed: renaming an .aiff to .wav
  * on the way to disk helps nobody who later opens it.
  */
@@ -213,7 +219,7 @@ export function localPath(sound: Sound, n: number, pseudo: string): string {
 	const pack = pseudo.replace(/[^a-z0-9-]+/gi, "_");
 	const safe = sound.name.replace(/[^a-z0-9-]+/gi, "_");
 	const i = n % sound.urls.length;
-	return `samples/${pack}/${safe}_${i}${extensionOf(sound.urls[i]) || ".wav"}`;
+	return `${pack}_${safe}_${i}${extensionOf(sound.urls[i]) || ".wav"}`;
 }
 
 /** The URL of variation `n` of a sound - `bd:3`, wrapping like Strudel's own `n`. */

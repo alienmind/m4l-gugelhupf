@@ -71,9 +71,6 @@ export default function App() {
 	const [playing, setPlaying] = useState<string | null>(null);
 	const [status, setStatus] = useState("Loading...");
 	const [folder, setFolder] = useState<string | null>(null);
-	/** Whether anything has been fetched this session - the "Copy folder path" button has
-	 *  nothing to reveal until then, and the folder itself does not exist yet. */
-	const [downloaded, setDownloaded] = useState(false);
 	const [showAbout, setShowAbout] = useState(false);
 	/** The custom-map secondary screen. Picking "Custom..." opens it; Cancel/back close it. */
 	const [showCustom, setShowCustom] = useState(false);
@@ -111,12 +108,11 @@ export default function App() {
 		return clearPreview; // a device view that goes away must not leave a loop running
 	}, [clearPreview]);
 
-	/** The downloads folder on the clipboard. `samples/` is where localPath() puts every
-	 *  file, so that subfolder is the useful path here - not the device folder itself. */
+	/** The downloads folder on the clipboard - the device folder itself, because
+	 *  localPath() saves flat into it. A save cannot reach a subdirectory. */
 	const copyFolder = useCallback(async () => {
 		if (!folder) return;
-		const path = `${folder}/samples`;
-		setStatus(copyMessage(await copyPath(path), path));
+		setStatus(copyMessage(await copyPath(folder), folder));
 	}, [folder]);
 
 	/** The list actually on screen. The cursor indexes THIS, not the catalog: a
@@ -221,7 +217,6 @@ export default function App() {
 						void saveToFile(path, bytes)
 							.then(() => {
 								onDisk.current.add(path);
-								setDownloaded(true);
 								setRows((r) => ({ ...r, [sound.name]: { ...r[sound.name], path } }));
 							})
 							.catch((err) => setStatus(`Saved nothing: ${message(err)}`));
@@ -481,17 +476,17 @@ export default function App() {
 				</span>
 				{/* The answer to "where did my sample go": neither the page nor Max can open a
 				    file manager (doc/TODO.md item 1), so the path goes on the clipboard to
-				    paste into one. Enabled once a sample is on disk - before that the folder
-				    does not exist. The drag-into-Live alternative was tried and failed
-				    (doc/DRAWER_OF_FAILED_IDEAS.md). */}
+				    paste into one. Live from ui_ready - the device folder is where the samples
+				    land and it exists before any of them do. The drag-into-Live alternative was
+				    tried and failed (doc/DRAWER_OF_FAILED_IDEAS.md). */}
 				<Button
 					icon={ClipboardCopy}
 					onClick={copyFolder}
-					disabled={!downloaded || !folder}
+					disabled={!folder}
 					title={
-						downloaded
+						folder
 							? "Copy the samples folder path to the clipboard, to paste into Explorer/Finder"
-							: "Audition a sample first - the folder appears once something is downloaded"
+							: "The device folder is not known yet"
 					}
 				/>
 			</div>
