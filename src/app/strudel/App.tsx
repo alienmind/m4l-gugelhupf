@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Activity, ClipboardCopy, Code, Link, ListPlus, SlidersVertical, Unlink } from "lucide-react";
+import { Activity, ClipboardCopy, Code, Link, ListPlus, Music4, SlidersVertical, Unlink } from "lucide-react";
 import { sendToWindow } from "@m4l-jweb/bridge";
 import { useNativePanel, useParam, useStateSync, useWindow } from "@m4l-jweb/surface/react";
 import { PatternEditor } from "../shared/PatternEditor";
@@ -152,6 +152,16 @@ export default function App() {
 					busy={s.exporting}
 					title="Export: render this pattern to a WAV next to the device and put it in the highlighted clip slot. On a MIDI track the file still lands - a new audio track is then offered"
 				/>
+				{/* THE MIDI CLIP, on a MIDI track only - which is where the instrument
+				    flavour lives and where the audio bounce cannot land. Live says which
+				    kind of track this is; the build does not. */}
+				{s.trackKind === "midi" && (
+					<Button
+						icon={Music4}
+						onClick={s.exportMidiClip}
+						title="Write this pattern as a MIDI clip on this track - the notes, not the audio. Samples and effects have no MIDI form and are dropped"
+					/>
+				)}
 				{/* Only while there is something to escape TO: the last bounce could not
 				    become a clip here, and a fresh audio track is the one target that
 				    cannot refuse it. Offered, never done unasked. */}
