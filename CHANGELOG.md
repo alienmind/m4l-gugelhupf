@@ -22,6 +22,14 @@ in the track the device is already on. `webaudio` sums the page onto the device 
 whatever the track carried still passes through. The instrument flavour writes the file
 and offers one button: bounce to a new audio track.
 
+**Export writes a MIDI clip on a MIDI track.** The instrument flavour gets a second export
+button: the pattern's notes into the first empty slot on its own track. The notes are
+queried from the pattern's haps before superdough sees them - the same `exportNotes()` /
+`patternCycles()` pair the MIDI device's To Clip has always used, including the rule that
+`n` is a sample index when `s` names a sound - so nothing is injected into the user's code
+and nothing about the sound changes. Which button appears comes from `onTrackKind()`
+(upstream), so Live decides, not the build.
+
 **A transport FOLLOW switch**, and bouncing turns it off. A clip in the device's own
 track is the pattern already recorded, so the next Play would sound both a few
 milliseconds apart. `follow` is a real Live parameter - automatable, mappable, saved with

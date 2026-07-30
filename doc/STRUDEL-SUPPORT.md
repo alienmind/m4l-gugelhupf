@@ -108,19 +108,25 @@ is always one of its own. So the audio flavour bounces into the slot you clicked
 instrument writes the file and offers one button, which makes a new audio track and puts
 it there.
 
+**The instrument has a second Export of its own: a MIDI CLIP.** It writes the pattern's
+NOTES into the first empty slot on its own track, which is the one thing a MIDI track can
+hold - captured from the pattern itself rather than by rewriting your code, so what you
+hear does not change. Samples and effects have no MIDI form and are dropped, so a pattern
+made of `s("bd sd")` writes an empty clip and says so.
+
 ### Limitations & Exceptions
 
 - **Not Yet MIDI Aware:** this device does not currently process inbound MIDI notes from
-  Ableton (doc/TODO.md item 3). For that today, use **Gugelhupf Synth**.
+  Ableton (doc/TODO.md item 2). For that today, use **Gugelhupf Synth**.
 - **Freeze does not work.** Live freezes a track by rendering it offline and faster than
   real time; this device's sound comes from a live browser engine that cannot run in that
   pass, so a frozen track goes silent. Export, or resample the track.
 - **Export renders the pattern in the DEVICE PAGE's scope**, not in the Studio's runtime.
   It is the same pattern text, but a pattern leaning on something only the Studio provides
-  bounces differently, or not at all. doc/TODO.md item 6.
+  bounces differently, or not at all. doc/TODO.md item 5.
 - **A long tail is cut off.** The bounce renders exactly the cycles the pattern repeats
   over, so a `.room()` or a long `.delay()` is truncated at the loop point and the clip
-  clicks. doc/TODO.md item 2.
+  clicks. doc/TODO.md item 1.
 
 ---
 
