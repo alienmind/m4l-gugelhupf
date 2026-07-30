@@ -106,6 +106,35 @@ export default [
 	},
 	{
 		/**
+		 * Strudel on an AUDIO track - the same device, in the one container that can
+		 * bounce into a clip.
+		 *
+		 * `ClipSlot.create_audio_clip` refuses any target that is not an audio track, and
+		 * an INSTRUMENT can never satisfy that: it sits on a MIDI track, and the clip slot
+		 * Live calls highlighted is always one of its own, because pressing a button in a
+		 * device's view requires that device's track to be selected. Targeting some other
+		 * track is therefore not a UI to be designed - it is unreachable.
+		 *
+		 * As an audio effect the question does not arise. Its own track has audio clip
+		 * slots, so a bounce lands where the device already is. `webaudio` SUMS [jweb~]
+		 * onto the device input rather than replacing it, so whatever the track was
+		 * carrying still passes through and the pattern is added to it.
+		 *
+		 * Same `ui` and same `mode` as the instrument: one page, one wrapper path. What
+		 * differs is asked of Live at runtime (`has_audio_input` on its own track), never
+		 * inferred from the mode - one device that can bounce and one that cannot is a
+		 * distinction the LOM already carries.
+		 */
+		name: "alienmind-gugelhupf-audio",
+		ui: "strudel",
+		type: "audio",
+		mode: "strudel",
+		chains: ["webaudio"],
+		latency: 66,
+		unmatchedTo: "js",
+	},
+	{
+		/**
 		 * Strudel Synth - one superdough sound, played by the track's MIDI (TODO item 3).
 		 *
 		 * The smallest instrument here: no pattern, no transport, no engine worker. The
