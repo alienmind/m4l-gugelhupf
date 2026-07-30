@@ -17,7 +17,7 @@ more; what follows is what 1.3 has to answer.
 
 ## Waiting on the library
 
-One thing: a save that a WINDOW page can make (item 6d). The Studio cannot write a file
+One thing: a save that a WINDOW page can make (item 5d). The Studio cannot write a file
 today, so it cannot bounce its own pattern even once strudel can render one.
 
 `createAudioClip()` shipped upstream in 1.3.0 and this repo consumes it - Export puts the
@@ -35,42 +35,7 @@ as `copyPath()` in `@m4l-jweb/bridge`.
 
 ## Open Tasks
 
-### 1. FEAT - Export the pattern as a MIDI CLIP, from the instrument flavour
-
-**The audio half shipped.** `alienmind-gugelhupf-audio` bounces its pattern into a clip
-on its own track (ARCHITECTURE 2e). The INSTRUMENT flavour cannot: it sits on a MIDI
-track, so the file lands and a new audio track is offered. But a MIDI track takes a MIDI
-clip, and this device already knows every note it is about to play - so Export on the
-instrument should write notes, not offer to leave.
-
-**The notes are already there, before superdough, and no `midiOut()` is needed.** A
-Strudel pattern is queried into HAPS and only then handed to a sink; the note devices'
-engine turns the same haps into MIDI, and the superdough sink is one branch of that same
-dispatch. So capture is a per-hap fan-out at the sink, not a rewrite of anything:
-
-- The bounce path already compiles the pattern on the main thread and picks the loop
-  period (`renderPeriod`), so it can query the same window it renders and map each hap.
-- `writeClip(lengthBeats, notes)` exists in `@m4l-jweb/bridge` today and writes into the
-  first empty slot on the device's OWN track - which for the instrument is a MIDI track.
-  Nothing new is needed on the Max side.
-- Export therefore becomes container-appropriate rather than conditional: the audio
-  flavour writes audio, the instrument writes notes, and neither has a disabled button.
-
-**What does NOT survive the translation, and has to be said in the UI rather than
-discovered:** a hap with no pitch (`s("bd sd")` names a sample, not a note) needs a drum
-map or is dropped - the drums-midi device already carries one worth reusing; `n` is a
-sample INDEX when `s` selects a bank and a pitch when it does not, so it needs the same
-disambiguation the MIDI devices do; and effects (`lpf`, `room`, `pan`) have no MIDI
-representation at all. A pattern that is mostly samples and effects exports a clip that
-is mostly empty, which is honest and still needs saying.
-
-**REJECTED: injecting code to turn the pattern into a MIDI stream.** Rewriting the user's
-text to nuke the audio output changes what is heard to get at what is played, is fragile
-against any pattern shape not anticipated, and is unnecessary - the haps exist before
-superdough sees them. The `.midichan()` split sketched in item 3 is the same mechanism
-seen from the live side, and the two should land as one dispatch rather than two.
-
-### 2. FEAT - a selectable TAIL on the bounce, so a reverb is not cut off
+### 1. FEAT - a selectable TAIL on the bounce, so a reverb is not cut off
 
 **The click is real and it is the loop point, not the renderer.** `renderCycles` renders
 exactly `renderPeriod()` cycles and stops, so anything still sounding at that instant -
@@ -99,7 +64,7 @@ says how many cycles were rendered, so it can say the tail too.
 Do not make it a Live parameter. It is not automatable, it is not on Push, and it is read
 once per bounce - `state()` is what carries it with the set.
 
-### 3. FEAT - native MIDI input (`midiIn`/`kb()`) and MIDI output
+### 2. FEAT - native MIDI input (`midiIn`/`kb()`) and MIDI output
 
 Wanted in the device view's SCRATCHPAD as much as in the main pattern: the point of a
 second instance is control code, and `midiin` is not on this device's chain list yet.
@@ -125,7 +90,7 @@ devices. What is missing is (in) feeding live notes into the pattern scope and
 
   NOTE: For this one, I would need examples on how to use (concrete strudel patterns) for midi routing from within the device
 
-### 4. FEAT - orbit() support (multichannel out)
+### 3. FEAT - orbit() support (multichannel out)
 
 **Assessment.** Valid, UNVERIFIED at its foundation. superdough can already render
 orbits to separate channel pairs (`initAudio({ multiChannelOrbits: true })` exists),
@@ -143,7 +108,7 @@ build emits jweb~ with 2N channels and the `webaudio` chain fans pairs to
 `duck()` then works inside superdough with no Max help at all (it is orbit-level
 DSP in the page). If the spike fails: park in the drawer with the finding.
 
-### 5. TEST - verify offline behavior in Live
+### 4. TEST - verify offline behavior in Live
 
 **Assessment.** Partly done. The persistent page-side cache shipped in 1.0.0 and was
 verified in Live: a sample played once online still plays after a restart with the
@@ -158,7 +123,7 @@ the timeouts and the UI's behaviour while a fetch is failing.
 - **Session cache**: a sound already auditioned this session still plays.
 - **Persistent cache (DONE)**: previously played samples survive a Live restart.
 
-### 6. FEAT (upstream strudel) - render the pattern to a WAV, from strudel.cc itself
+### 5. FEAT (upstream strudel) - render the pattern to a WAV, from strudel.cc itself
 
 **Down here on purpose, and it is the one upstream item that costs something to defer.**
 It blocks nothing - Export works, and now lands a clip - but it is the last correctness
@@ -180,7 +145,7 @@ The commits must be mergeable upstream on their own merits, and this repo must k
 building against STOCK strudel - the shim asks for what may not be there and fails soft,
 exactly as it already does for `slider()` metadata.
 
-#### 6a. The renderer, in `superdough`
+#### 5a. The renderer, in `superdough`
 
 A new `packages/superdough/render.mjs`, which is `src/lib/render/offline.ts` with the
 m4l-shaped edges taken off. Everything it needs is already exported by superdough
@@ -215,7 +180,7 @@ dependency-free as it stands). The loop length comes from `renderPeriod()`
 (`src/lib/render/determinism.ts`) - it queries the pattern at growing cycle counts until
 the haps repeat, capped - so the UI does not have to ask "how many cycles".
 
-#### 6b. The UI, in the website
+#### 5b. The UI, in the website
 
 **Put it in the panel, not next to Play.** A render is the one action in strudel that
 can take seconds and touch the network (unloaded samples), and the transport bar is
@@ -223,7 +188,7 @@ where reflexes live. A `render` tab in `website/src/repl/components/panel/Panel.
 cycles (defaulting to the detected period), sample rate, a Render button, the resulting
 length - can say what it is about to do. Promote it to the main bar later if it earns it.
 
-#### 6c. The seam that lets m4l save the file, with strudel knowing nothing about m4l
+#### 5c. The seam that lets m4l save the file, with strudel knowing nothing about m4l
 
 The website's default delivery is a browser download - `URL.createObjectURL` and an
 `<a download>`. Before doing it, dispatch a CANCELABLE event:
@@ -242,7 +207,7 @@ useful to any embedder. Expose `window.strudelRender(opts)` alongside it so a ho
 START a render too - that is what lets the device view's Export button bounce the
 STUDIO's pattern rather than its own.
 
-#### 6d. What is blocked here until the library moves
+#### 5d. What is blocked here until the library moves
 
 The Studio is a floating window, and **a window page cannot save today**. The wrapper's
 `window()` dispatch passes `ui_ready`/`get_state`/`sync_state`/`param_*` through and
@@ -252,13 +217,13 @@ a window-originated save would write the file and reply `save_ok` to the DEVICE 
 The library has to record the origin window on the pending request instead. Until then
 2a-2c stand on their own (they download), and only the m4l wiring waits.
 
-### 7. FEAT (upstream strudel) - a Sliders pane in the sidebar
+### 6. FEAT (upstream strudel) - a Sliders pane in the sidebar
 
 **Blocks nothing at all**, which is why it is last: the shim already parses `name`, `unit`
 and `order` out of the code text and the dials carry them today. What lands upstream is
 the same thing done properly, for everyone.
 
-Same shape as item 6 and the same constraint: it is a strudel feature that this repo
+Same shape as item 5 and the same constraint: it is a strudel feature that this repo
 happens to want. A pattern's `slider()` calls are already gathered here - the shim reads
 `strudelMirror.widgets` after each evaluation and puts the first eight on the device's
 S1..S8 dials - and strudel.cc itself has nowhere to see them but inline in the code.

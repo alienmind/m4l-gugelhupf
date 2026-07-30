@@ -279,6 +279,38 @@ mappable, saved with the set) gating only the wrapper's `transport_play`, never 
 never automation written against `play`: the switch is about Live STARTING the pattern,
 not about the pattern being startable.
 
+### 2f. ...and on a MIDI track it writes NOTES instead
+
+The instrument flavour sits on a MIDI track, which takes no audio clip - but it takes a
+MIDI one, and the device already knows every note it is about to play. So Export is not
+conditional per flavour: the audio one writes audio, the MIDI one offers a second button
+that writes notes, and neither has a control that does nothing.
+
+**The notes are captured from the HAPS, before superdough sees them.** A Strudel pattern
+is a pure function of time queried into haps; the sink is what turns a hap into sound. So
+`exportNotes()` / `patternCycles()` (`src/max/shared/engine.mjs`) - the same pair the MIDI
+device's To Clip has always used - query the pattern and map each hap to a note, and
+`writeClip()` puts them in the first empty slot on this device's own track. Nothing is
+injected into the user's code, nothing about the sound changes, and there is no second
+parser: it is one `{t:"export"}` message to the engine worker this page already mounts
+(idle - nothing ever posts `code` to it, because Run goes to the Studio).
+
+**`hapPitch()` is the part that would be got wrong on a rewrite.** `n` is a sample INDEX
+when `s` names a mapped sound (`s("bd:3")` is the fourth bd, not note 3) and a pitch only
+in its absence, and `note` outranks both. That ordering is already there and already
+tested.
+
+**What has no MIDI form is DROPPED, not approximated.** A hap with no pitch (`s("bd sd")`
+names samples) and every effect (`lpf`, `room`, `pan`) simply do not appear, so a pattern
+made of samples writes an EMPTY clip - which is reported as a sentence rather than as a
+success, because "wrote 0 notes" is the one outcome a user will read as a bug.
+
+**Which button appears is Live's answer, not the build's.** `onTrackKind()` (upstream in
+1.3.0) carries `track_kind audio|midi|none` at ui_ready, from `has_audio_input` /
+`has_midi_input` on the device's own track. Two manifest entries that differ in a fact
+Live already knows would be two builds able to disagree with reality - and a device
+dragged onto the wrong kind of track would have no way to say so.
+
 ## 3. Message Protocol (jweb ⇄ js)
 
 Each device defines its selectors in `src/app/<device>/protocol.ts`, extending `@m4l-jweb/bridge` base events.
@@ -293,6 +325,7 @@ Each device defines its selectors in `src/app/<device>/protocol.ts`, extending `
 | UI ⇄ worker (pattern devices) | `code`/`hush`/`tick` in, `ready`/`evalok`/`evalerr`/`notes`/`voices`/`doughEvents`/`flush` out | postMessage, not Max messages |
 | UI ⇄ Max (browser, strudel) | `fetch_to_file` / `fetch_done`, `save_begin`/`save_chunk`/`save_end` / `save_done` | the `download` chain: file acquisition and `saveToFile` |
 | UI ⇄ js (strudel) | `create_audio_clip <id> <b64 spec>` / `clip_created`, `clip_error <id> <reason> <msg>` | a rendered WAV into a clip slot. No chain - pure LiveAPI |
+| js → UI (all) | `track_kind <audio\|midi\|none>` | which container this instance is in, at ui_ready |
 | UI ⇄ js (drums, fx) | `sync_state <id> <json>`, `state_<id> <json>` | state slots, via `useStateSync()` |
 
 Audio itself is **not** in this table any more: it leaves the page as a signal on
@@ -440,7 +473,7 @@ and heard through the track. An instrument on the `webaudio` chain alone.
   `setSliderOverrides` into the next compile, so the pattern is re-evaluated with the new
   value. `engine.mjs` holds the capture (`beginSliderCapture`/`getSliderSpecs`) for the
   worker; `lib/render/scope.ts` carries the same for the main-thread export renderer. What
-  the dials still do NOT carry upstream is the slider metadata itself (TODO item 7). Two
+  the dials still do NOT carry upstream is the slider metadata itself (TODO item 6). Two
   findings from the 0.9.x version worth keeping:
   the wrapper's rename takes on the DEVICE PANEL but never reaches the Rack macro / Live
   parameter registry (those stay `s1..s8`), and a first attempt to carry each slider's real
@@ -543,7 +576,7 @@ EXPORT still renders in the DEVICE PAGE, offline, and never disturbs the music -
 Studio is a different Chromium context with its own superdough singletons. It is the same
 pattern TEXT, but compiled in this page's scope, so a pattern leaning on something only
 the Studio's runtime provides bounces differently. Fixing that means a renderer in strudel
-itself: doc/TODO.md items 6 and 6d.
+itself: doc/TODO.md items 5 and 5d.
 
 `src/app/strudel/repl-shim/m4l-shim.js` is the only line of ours inside that app: it
 arms the audio (the REPL waits for a `mousedown` that a hidden window never gets),
