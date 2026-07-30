@@ -153,3 +153,12 @@ export default [
 		unmatchedTo: "js",
 	},
 ];
+
+/**
+ * Files that ride along in the release ZIP without belonging to any device.
+ *
+ * The manual, in both forms. The markdown is the source and is always there; the PDF is
+ * rendered by `scripts/build-manual.mjs` and is skipped on a machine with no Chromium, so
+ * the packaging step treats a missing doc as a warning rather than a failure.
+ */
+export const docs = ["USERSMANUAL.md", "dist/manual/USERSMANUAL.pdf"];
