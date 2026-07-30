@@ -19,7 +19,8 @@ more; what follows is what 1.3 has to answer.
 
 Two things, both named in the items below: `createAudioClip()` (item 1) and a save that
 a WINDOW page can make (item 2d) - the Studio cannot write a file today, so it cannot
-bounce its own pattern even once strudel can render one.
+bounce its own pattern even once strudel can render one. They are independent: item 1 is
+buildable now, against the WAV the device page already writes.
 
 `defineFiles()` shipped upstream and this repo consumes it:
 `src/app/{strudel,drums-sampler,sample-browser}/files.ts` is the single declaration that
@@ -34,14 +35,18 @@ as `copyPath()` in `@m4l-jweb/bridge`.
 
 ### 1. FEAT - Export straight into a Live clip
 
-**The workaround can go.** Export writes a WAV and hands the user a path to paste into
-Explorer and drag back in, because it was believed Live had no scripted way to make an
-audio clip. That was wrong: `ClipSlot.create_audio_clip(<absolute path>)` puts a WAV in a
-Session slot and `Track.create_audio_clip(<path>, <position>)` puts one in the
-Arrangement, from Live 12.0.5 onward. See
-[DRAWER_OF_FAILED_IDEAS.md](DRAWER_OF_FAILED_IDEAS.md) for how the wrong premise got
-recorded, and m4l-jweb's TODO item 1 for the library half - **this repo cannot start
-until that lands**, because the call belongs in the wrapper, not here.
+**The workaround works, and that is the baseline this replaces.** Confirmed in Live on
+both `alienmind-gugelhupf` and `alienmind-gugelhupf-drums-sampler`: Export writes the WAV,
+the copy button puts its full path on the clipboard, and pasting that into Explorer and
+dragging the file into a track lands the audio. Nothing about Export is broken; it is the
+five manual steps that are worth deleting.
+
+`ClipSlot.create_audio_clip(<absolute path>)` puts a WAV in a Session slot and
+`Track.create_audio_clip(<path>, <position>)` puts one in the Arrangement, from Live
+12.0.5 onward - the "LOM cannot make an audio clip" premise this was built on was false.
+See [DRAWER_OF_FAILED_IDEAS.md](DRAWER_OF_FAILED_IDEAS.md) for how it got recorded, and
+m4l-jweb's TODO item 1 for the library half - **this repo cannot start until that lands**,
+because the call belongs in the wrapper, not here.
 
 **The design problem is WHERE the clip goes.** Both calls print an error unless the
 target is an audio track that is not frozen and not recording - and every device here
@@ -66,10 +71,16 @@ rendered at, so the clip can be right rather than warped by guess.
 **Keep the copy-path button.** Live 12.0.4 and older have no such call, and the path is
 still the honest answer there.
 
-**What it bounces:** the right TEXT, in the wrong SCOPE. There is one pattern now, so
-Export renders what the Studio is playing - but it compiles it in the device page rather
-than in the Studio's runtime, so anything leaning on what only that runtime provides
-renders differently. Item 2 is the route to rendering it where it actually runs.
+**The Studio owning the audio does NOT block this**, and the two should not be sequenced
+together. The clip call is LiveAPI in the wrapper, driven by the device page, which is
+still the page that renders the WAV and knows its path - none of that changed when the
+device page stopped playing. What the Studio owning the engine costs is FIDELITY: the
+bounce is the right TEXT compiled in the device page's scope, so a pattern leaning on
+something only the Studio's runtime provides renders differently or not at all. Item 2
+fixes the fidelity; this item fixes the handoff; neither waits for the other. When item 2
+does land, the WAV comes from the Studio and the only new plumbing is which page calls
+`createAudioClip` - a filename is a string, so it can cross to the device page and be
+called from there exactly as now.
 
 ### 2. FEAT (upstream strudel) - render the pattern to a WAV, from strudel.cc itself
 
