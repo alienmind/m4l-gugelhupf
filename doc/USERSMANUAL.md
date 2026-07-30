@@ -1,10 +1,10 @@
 <div class="titlepage">
 
-![Gugelhupf](logo.png)
+![Gugelhupf](logo-print.png)
 
 # Gugelhupf - Generative Max 4 Live device (which is not like a Strudel)
 
-## v1.3.0
+## v1.3.1
 
 *"A Gugelhupf, like a Strudel, is a traditional Central European cake."*
 
