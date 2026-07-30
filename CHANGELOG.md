@@ -3,7 +3,7 @@
 High-level history of m4l-gugelhupf, grouped by milestone release. Up to 1.0.0 each
 minor version was a milestone of its own. Newest first.
 
-## 1.3.0 - a bounce lands in a clip
+## 1.3.1 - a bounce lands in a clip
 
 **Export puts the WAV straight into a clip slot.** It renders as before, and then calls
 `createAudioClip()` (new upstream in m4l-jweb 1.3.0): the clip is named, warped, and
