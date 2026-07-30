@@ -560,6 +560,16 @@ export function useStrudelEngine(opts: EngineOptions): EngineState {
 					duration: n.duration * bpc,
 				}));
 				const lengthBeats = m.cycles * bpc;
+				// A pattern with no PITCHES is the `s("bd sd")` trap - it names samples, and
+				// nothing here has a note to write. Writing the clip anyway produced an empty
+				// one in a slot the user then has to delete, over a status line reading
+				// "Wrote 0 notes", which is a success message for a failure.
+				if (notes.length === 0) {
+					const empty = 'No notes in this pattern - a MIDI clip needs note(), or bare mini-notation. s("bd sd") names samples, not pitches';
+					setStatus(empty);
+					clipCbRef.current.failed?.(empty);
+					return;
+				}
 				outlet(OUT.write_clip, ...toFlatList(notes, lengthBeats));
 				setStatus(
 					`Wrote ${notes.length} notes over ${lengthBeats} beats (${m.cycles} cycle${m.cycles === 1 ? "" : "s"})`,

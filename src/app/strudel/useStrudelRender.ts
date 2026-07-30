@@ -160,12 +160,9 @@ export function useStrudelRender(
 		// The MIDI clip export's outcome, straight into the one notice row this device
 		// has. The engine reports it as prose too, which is what the MIDI device's clip
 		// panel prints; this page would have to pattern-match that string.
-		onClipWritten: (notes, beats) =>
-			setExportNote(
-				notes === 0
-					? "No notes in this pattern - a MIDI clip needs note(), or bare mini-notation. s(\"bd sd\") names samples, not pitches"
-					: `MIDI clip written - ${notes} note${notes === 1 ? "" : "s"} over ${beats} beats`,
-			),
+		// A pattern with nothing to write never gets here - the engine refuses rather than
+		// creating an empty clip, and answers onClipError instead.
+		onClipWritten: (notes, beats) => setExportNote(`MIDI clip written - ${notes} note${notes === 1 ? "" : "s"} over ${beats} beats`),
 		onClipError: setExportNote,
 		initialText: INITIAL_TEXT,
 		ctx: EMPTY_CTX,
