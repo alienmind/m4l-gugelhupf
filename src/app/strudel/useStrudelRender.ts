@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { registerSynthSounds, samples, setGainCurve, initAudio, getAudioContext } from "superdough";
-import { AudioClipError, copyMessage, copyPath, createAudioClip, onDeviceFolder, saveToFile } from "@m4l-jweb/bridge";
+import { AudioClipError, copyMessage, copyPath, createAudioClip, onDeviceFolder, onTrackKind, saveToFile, type TrackKind } from "@m4l-jweb/bridge";
 import { useParam } from "@m4l-jweb/surface/react";
 
 import { bootScope, compile } from "../../max/shared/engine.mjs";
@@ -32,6 +32,12 @@ import surface, { INITIAL_TEXT } from "./surface";
  * `useStrudelEngine` is still mounted, with `transport: false` so it never sounds. It is
  * what reads Live's tempo, tracks beats-per-cycle and parses the text; the bounce below
  * needs all three, and none of them make noise.
+ *
+ * Its engine WORKER does exist, and is not idle scaffolding any more: nothing ever posts
+ * `code` to it from this page (Run goes to the Studio), so it compiles nothing and plays
+ * nothing - but `toMidi()` posts a one-off `export`, which compiles the pattern in the
+ * worker and queries its haps. That is what writes a MIDI clip on the instrument flavour,
+ * and it is the same query the MIDI device's To Clip runs.
  */
 
 /** Longest bounce we render, in cycles - a pattern whose period does not settle is
@@ -101,6 +107,16 @@ export function useStrudelRender(
 	// underneath it as well is the doubling this switches off. It is a real Live
 	// parameter, so it persists with the set and can be mapped - see surface.ts.
 	const [follow, setFollow] = useParam(surface, "follow");
+	/**
+	 * Which container this instance is in, from Live rather than from the build.
+	 *
+	 * The two flavours are one page: an audio track takes the audio bounce, a MIDI track
+	 * takes a MIDI clip, and neither takes the other. Asking Live means the page cannot be
+	 * wrong about which build it is, and a device dragged onto the wrong kind of track says
+	 * so instead of failing at the call.
+	 */
+	const [trackKind, setTrackKind] = useState<TrackKind>("none");
+	useEffect(() => onTrackKind(setTrackKind), []);
 
 	// The sounds the BOUNCE needs. Nothing here plays: superdough is loaded in this page
 	// only so an offline render can resolve `s("bd")` and the synth waveforms, and the
@@ -141,6 +157,16 @@ export function useStrudelRender(
 		// transport moves, and Play is what the Studio follows. So the follow gate
 		// belongs here even though nothing here makes a sound.
 		follow,
+		// The MIDI clip export's outcome, straight into the one notice row this device
+		// has. The engine reports it as prose too, which is what the MIDI device's clip
+		// panel prints; this page would have to pattern-match that string.
+		onClipWritten: (notes, beats) =>
+			setExportNote(
+				notes === 0
+					? "No notes in this pattern - a MIDI clip needs note(), or bare mini-notation. s(\"bd sd\") names samples, not pitches"
+					: `MIDI clip written - ${notes} note${notes === 1 ? "" : "s"} over ${beats} beats`,
+			),
+		onClipError: setExportNote,
 		initialText: INITIAL_TEXT,
 		ctx: EMPTY_CTX,
 		liveScale: "C4:major",
@@ -211,6 +237,31 @@ export function useStrudelRender(
 		},
 		[setFollow],
 	);
+
+	/**
+	 * The pattern as a MIDI CLIP, on this device's own track.
+	 *
+	 * The instrument flavour sits on a MIDI track, which takes no audio clip - but it takes
+	 * a MIDI one, and this device already knows every note it is about to play. The notes
+	 * are captured from the pattern's HAPS, before superdough ever sees them, so nothing is
+	 * injected into the user's code and nothing about the sound changes: it is the same
+	 * query the MIDI device's To Clip does (`exportNotes` / `patternCycles` in engine.mjs),
+	 * including the `n`-is-a-sample-index rule that keeps `s("bd:3")` from becoming note 3.
+	 *
+	 * What has no MIDI form is dropped rather than approximated: a hap with no pitch
+	 * (`s("bd sd")` names a sample), and every effect (`lpf`, `room`, `pan`). A pattern made
+	 * of samples therefore writes an EMPTY clip, which is why zero notes is reported as a
+	 * sentence rather than as a success.
+	 */
+	const exportMidiClip = useCallback(() => {
+		if (!engine.text.trim()) {
+			setExportNote("Nothing to export - the pattern is empty");
+			return;
+		}
+		setOfferNewTrack(null);
+		setExportNote("Rendering the pattern to notes...");
+		engine.toMidi();
+	}, [engine.text, engine.toMidi]);
 
 	/** The offered escape, taken: a fresh audio track, and the bounce in its first slot. */
 	const bounceToNewTrack = useCallback(async () => {
@@ -296,5 +347,8 @@ export function useStrudelRender(
 		/** Non-null when the last bounce could not become a clip here, and a new track would. */
 		offerNewTrack: Boolean(offerNewTrack),
 		bounceToNewTrack,
+		exportMidiClip,
+		/** What Live says this instance is sitting on - which decides what clips it can make. */
+		trackKind,
 	};
 }

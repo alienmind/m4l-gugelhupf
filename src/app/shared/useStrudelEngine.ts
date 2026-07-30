@@ -132,6 +132,16 @@ export interface EngineOptions {
 	 */
 	follow?: boolean;
 	/**
+	 * A MIDI clip was written: how many notes, over how many beats.
+	 *
+	 * `toMidi()` otherwise reports only through `status`, which is prose the MIDI device
+	 * prints in its clip panel. A device whose clip export shares one notice row with an
+	 * audio bounce needs the OUTCOME, not a string to pattern-match on.
+	 */
+	onClipWritten?: (notes: number, beats: number, cycles: number) => void;
+	/** ...and the other end: the pattern would not compile, or there was nowhere to write. */
+	onClipError?: (message: string) => void;
+	/**
 	 * What this device adds to the NoteContext: `scale`, or `drumMap`. MUST be
 	 * memoized by the caller - it keys the recompile below, so a fresh object every
 	 * render would re-evaluate the pattern on every render.
@@ -250,6 +260,9 @@ export function useStrudelEngine(opts: EngineOptions): EngineState {
 	// CURRENT answer, not the one that was true when the page loaded.
 	const followRef = useRef(opts.follow ?? true);
 	followRef.current = opts.follow ?? true;
+	// Same reason as followRef: the worker's handler is bound once, at mount.
+	const clipCbRef = useRef({ written: opts.onClipWritten, failed: opts.onClipError });
+	clipCbRef.current = { written: opts.onClipWritten, failed: opts.onClipError };
 	const voiceSinkRef = useRef(opts.voiceSink);
 	voiceSinkRef.current = opts.voiceSink;
 	const superdoughSinkRef = useRef(opts.superdoughSink);
@@ -435,14 +448,17 @@ export function useStrudelEngine(opts: EngineOptions): EngineState {
 		});
 		bindInlet(IN.write_error, (reason) => {
 			const r = String(reason);
+			let message: string;
 			if (r === "no_track") {
 				setClipSupported(false);
-				setStatus("MIDI clips unavailable here - this device cannot reach a track");
+				message = "MIDI clips unavailable here - this device cannot reach a track";
 			} else if (r === "no_slot") {
-				setStatus("No empty clip slot on this track - free a slot and try again");
+				message = "No empty clip slot on this track - free a slot and try again";
 			} else {
-				setStatus("Could not write the clip - see the Max console");
+				message = "Could not write the clip - see the Max console";
 			}
+			setStatus(message);
+			clipCbRef.current.failed?.(message);
 		});
 	}, [grid, conv, octaveOffset, beatsPerBar]);
 
@@ -548,8 +564,10 @@ export function useStrudelEngine(opts: EngineOptions): EngineState {
 				setStatus(
 					`Wrote ${notes.length} notes over ${lengthBeats} beats (${m.cycles} cycle${m.cycles === 1 ? "" : "s"})`,
 				);
+				clipCbRef.current.written?.(notes.length, lengthBeats, m.cycles);
 			} else if (m.t === "exporterr") {
 				setStatus(`Cannot export: ${m.message}`);
+				clipCbRef.current.failed?.(m.message);
 			} else if (m.t === "phase") {
 				setPhase(m.cycle);
 			} else if (m.t === "flush") {
