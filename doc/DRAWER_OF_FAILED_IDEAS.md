@@ -606,3 +606,57 @@ restored, and never wrote the Studio's pattern back - the `code` slot had been f
 its default and the Studio was not saving with the set. It presented as a transport bug
 for two rounds. The log said it in one line: no `sync_state code`, ever. A wire format
 repeated by hand in a file that cannot import needs a test that reads the real bytes.
+
+## Bouncing into the HIGHLIGHTED clip slot, from an instrument (2026-07-30)
+
+`ClipSlot.create_audio_clip` needs an audio track, and the design chosen for it was
+Live's highlighted slot - `live_set view highlighted_clip_slot`, checked for
+`has_audio_input` first, with a clear message when the target was wrong. The message
+would have said something no user could ever act on.
+
+**A device's view is only on screen while its track is selected.** Clicking a slot on
+the audio track selects that track, and Live's device view then shows THAT track's
+devices - so the button that would create the clip is no longer on screen. Selecting the
+device's own track to press it moves the highlighted slot back to a MIDI slot. The two
+states needed are mutually exclusive, and no amount of message-wording fixes it.
+
+Neither remaining option in the table survives contact either. **A new audio track per
+bounce** is right as an explicit escape and wrong as the default - it is a device
+spawning tracks. **A remembered target** stores a track index that goes stale the moment
+tracks are reordered, and it still has to be picked in a UI that has the same visibility
+problem.
+
+**What shipped instead is a second CONTAINER, not a second targeting scheme.**
+`alienmind-gugelhupf-audio` is the same page, the same wrapper and the same Studio,
+declared `type: "audio"` - so it sits on an audio track and bounces into a slot on the
+track it is already on. The highlighted slot is then always the right one, for the same
+reason it was always the wrong one before. `target: "new"` stayed as the offered escape
+for the instrument flavour, and the copy-path button stayed for everything else.
+
+Worth stating because it generalises: **a device can only ever act on the track it is
+on.** Anything shaped like "do this to another track" needs a trigger that outlives the
+selection - a mapped Live parameter, or a floating window - not a button in the device
+view.
+
+## Cross-device coordination in the Rack - dropped without being built (2026-07-30)
+
+A track-scoped message channel between our devices (`[send]`/`[receive]` named from the
+device's own track id), and on top of it one Strudel expression spanning the sequencer and
+the fx device - `.lpf()` delegated to the fx device's native dials instead of being baked
+into the page's audio.
+
+**Half its reason died with the WAV pipeline.** The original case was that effects were
+baked into a pre-rendered bounce and therefore could not be automated; they are live in
+the page now, and have been since 0.9.9. What was left is narrower: native dials, Push and
+automation lanes on effects while superdough only sequences.
+
+**And that is already reachable by hand.** Put `alienmind-gugelhupf-fx` after the device
+and map its nine stages - they are real Live parameters, so a Rack's macros already span
+both devices. What the channel would add is the pattern text driving them from one line,
+which is convenience over a path that exists.
+
+Against that: a protocol, a naming scheme derived from a track id, a fan-in on the
+receiving device, and a new failure mode where two devices disagree about who owns a
+value. Cross-TRACK routing was always out of scope, so it would never have grown into the
+general thing it looks like. Not refused on principle - re-open it if a pattern spanning
+two devices turns out to be something people actually reach for.

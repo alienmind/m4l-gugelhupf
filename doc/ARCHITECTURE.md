@@ -1,6 +1,6 @@
 # m4l-gugelhupf - Architecture
 
-One repo → six self-contained Max for Live devices, each with its own React UI bundle, built on the [M4L-JWEB](https://github.com/alienmind/m4l-jweb) library.
+One repo → eight self-contained Max for Live devices, each with its own React UI bundle, built on the [M4L-JWEB](https://github.com/alienmind/m4l-jweb) library.
 
 This document describes the high-level architecture, the build pipeline, the runtime anatomy, the message protocol, and exactly how we integrate with upstream Strudel. For the underlying M4L-JWEB approach itself (the `.amxd` container writer, generated patchers, the `[js]` lifecycle, the Surface) see [m4l-jweb's own doc/ARCHITECTURE.md](https://github.com/alienmind/m4l-jweb/blob/main/doc/ARCHITECTURE.md).
 
@@ -33,9 +33,10 @@ This document describes the high-level architecture, the build pipeline, the run
                           pnpm build
                  (@m4l-jweb/build under the hood)
                                ▼
-                    seven self-contained .amxd
+                    eight self-contained .amxd
                                │
    ├── alienmind-gugelhupf.amxd                (instrument)
+   ├── alienmind-gugelhupf-audio.amxd          (audio - the same device, bounceable)
    ├── alienmind-gugelhupf-synth.amxd          (instrument)
    ├── alienmind-gugelhupf-drums-sampler.amxd  (instrument)
    ├── alienmind-gugelhupf-sample-browser.amxd (instrument)
@@ -51,7 +52,10 @@ device is the whole language). Every other device keeps its suffix.
 An **instrument** originates sound and fills a track's instrument slot (strudel, the
 synth, the drums sampler, and the sample browser - a preview is a sound source, not a
 process).
-An **audio** effect processes what is already on the track (fx).
+An **audio** effect processes what is already on the track (fx) - or, for
+`alienmind-gugelhupf-audio`, ADDS to it: the `webaudio` chain sums the page onto the
+device input rather than replacing it, which is what lets one device be an instrument on a
+MIDI track and a generator on an audio track with no second implementation (§2e).
 A **MIDI** device emits notes and has no signal path at all (midi, drums-midi).
 
 ## 1. The Build Pipeline
@@ -183,19 +187,15 @@ wrapper uses one `m4l-jweb-save.part` per device folder now - reused, overwritte
 worst a single stray empty file however many exports are made. (Upstream in
 `@m4l-jweb/wrapper`; `tests/wrapper-max.test.mjs` pins it.)
 
-**OPEN, 1.0.0: `could not place save: -1 bytes at destination`.** Export on the Strudel
-device renders and then fails at exactly this last step, in Live. `-1` is the wrapper's
-"cannot size the destination file at all", so the scratch file was never placed over the
-target - not placed short. The save protocol is the library's, so the fault may be
-upstream; m4l-jweb 1.0.0 carries a related fix (one reused scratch file per folder) that
-landed after this was seen, and re-testing against it comes before debugging anything
-here. Diagnostic order: does the `.part` exist at the right size after `save_end`; does
-`deviceFolder()` resolve to a real writable directory (an unsaved patcher has none); is
-the `download` chain - which owns [maxurl], and therefore the place step - really wired.
-Tracked as TODO item 1. It NO LONGER blocks the clipboard item behind it: the Copy
-button used to appear only once a file had been written, so a device whose Export was
-failing could never be used to test the copy at all. The folder is known at `ui_ready`,
-independently of any write, and the button now follows the folder.
+**CLOSED: `could not place save: -1 bytes at destination`.** Export failed at exactly this
+last step for a while, and none of the theories about this repo were right - the cause was
+upstream and on the filesystem. `[js]`'s `File` in write mode resolves a NAME that already
+exists on Max's search path to that existing file, so one save from an unsaved patcher had
+left a stray `m4l-jweb-save.part` in Max's own folder and every later save wrote there
+instead, however absolute the path it was given. Moving the stray aside fixed it with no
+code change. The whole postmortem is m4l-jweb's MAX-FACTS ("a RELATIVE path handed to
+`File`"), and the lesson it is kept for is the method: seven confidently-reasoned
+hypotheses died to one directory listing.
 
 **The rule that used to be carried by hand, and is now declared.** A device that wrote a
 file needed `download` in its chain list AND `HAS_DEVICE_FOLDER` in `wrapper/device.ts` -
@@ -229,6 +229,56 @@ which would make the next `getAudioContext()` build a fresh realtime context and
 a `[jweb~]` device playing out of a context that reaches no signal outlet. Playback goes
 quiet for the length of the bounce, re-anchors, and resumes.
 
+### 2e. ...and the bounce goes STRAIGHT INTO A CLIP
+
+Export used to end at a file: a `.wav` flat in the device folder, its path on the
+clipboard, and five manual steps in Explorer between there and a track. `createAudioClip()`
+(`@m4l-jweb/bridge`, LiveAPI in the packaged wrapper) deletes those five steps. It is pure
+LOM - no chain, no patcher boxes - and the premise that blocked it for months ("the LOM
+cannot make an audio clip") was simply false.
+
+**The device that can bounce is the AUDIO one, and that is the whole design.**
+`create_audio_clip` needs an audio track, and an instrument sits on a MIDI one - but the
+reason a MIDI instance cannot target another track is not the LOM, it is Live's UI: a
+device's view is visible only while its own track is selected, so the highlighted clip
+slot is *always* a slot on the device's own track. `alienmind-gugelhupf-audio` is the same
+page, the same wrapper and the same Studio declared `type: "audio"`, so it lives on an
+audio track and bounces into the track it is already on. `webaudio` SUMS `[jweb~]` onto
+the device input rather than replacing it, so the track's existing audio passes through
+and the pattern is added to it. See the drawer for the three targeting schemes this
+replaced.
+
+`alienmind-gugelhupf` (the instrument) still exports the file and is answered
+`not_audio_track`; the page then offers ONE button - bounce to a new audio track
+(`create_audio_track(-1)`) - and never takes it unasked. The copy-path button stays for
+Live 12.0.4 and older, where the call exists and does nothing.
+
+**The request is ONE base64 atom.** Max splits a message on whitespace, and both variadic
+fields here have spaces in real use: a User Library path contains "Ableton Library", and a
+clip name is whatever the user typed. Two of them in one flat message cannot be told apart
+again, so the whole spec travels as JSON in a single symbol - the same reason
+`encodeBase64` exists for state. LiveAPI's own `call` does not split (measured;
+MAX-FACTS), which is the separate question that had to pass first.
+
+**The clip is set up from what the render KNOWS, not from what Live can infer.** The page
+chose the cycle count and the cps it rendered at, so `loopEnd = cycles * beatsPerCycle` is
+exact, and the clip is warped in Beats mode with its loop and markers set to it. Live would
+otherwise infer a grid from transients, which is the difference between a bounce that
+plays in time and one that needs hand-warping. The name is the PATTERN, one line of it,
+rather than `gugelhupf-export-1785343077706`.
+
+**A clip is not atomic, and the request does not pretend it is.** Every setup write is
+guarded on its own and none of them can fail the bounce: by the time they run the clip is
+in the slot, and refusing a landed bounce because its name did not take is the wrong
+trade. What did not take is posted to the Max console.
+
+**And bouncing turns the transport FOLLOW off.** A clip in the device's own track is the
+device's own sound, recorded - so the next Play would sound the clip and the live pattern
+together, a few milliseconds apart. `follow` is a real Live parameter (automatable,
+mappable, saved with the set) gating only the wrapper's `transport_play`, never Run and
+never automation written against `play`: the switch is about Live STARTING the pattern,
+not about the pattern being startable.
+
 ## 3. Message Protocol (jweb ⇄ js)
 
 Each device defines its selectors in `src/app/<device>/protocol.ts`, extending `@m4l-jweb/bridge` base events.
@@ -242,6 +292,7 @@ Each device defines its selectors in `src/app/<device>/protocol.ts`, extending `
 | UI → Max (midi) | `midinote ...`, `flush` | scheduled engine output, via `sendNote()`/`flushNotes()` |
 | UI ⇄ worker (pattern devices) | `code`/`hush`/`tick` in, `ready`/`evalok`/`evalerr`/`notes`/`voices`/`doughEvents`/`flush` out | postMessage, not Max messages |
 | UI ⇄ Max (browser, strudel) | `fetch_to_file` / `fetch_done`, `save_begin`/`save_chunk`/`save_end` / `save_done` | the `download` chain: file acquisition and `saveToFile` |
+| UI ⇄ js (strudel) | `create_audio_clip <id> <b64 spec>` / `clip_created`, `clip_error <id> <reason> <msg>` | a rendered WAV into a clip slot. No chain - pure LiveAPI |
 | UI ⇄ js (drums, fx) | `sync_state <id> <json>`, `state_<id> <json>` | state slots, via `useStateSync()` |
 
 Audio itself is **not** in this table any more: it leaves the page as a signal on
@@ -351,7 +402,8 @@ and heard through the track. An instrument on the `webaudio` chain alone.
 - **Sounds must be registered.** `registerSynthSounds()` for the oscillators, then strudel's
   six prebaked sample maps (the same URLs as `strudel/packages/repl/prebake.mjs`) loaded in
   the background with `allSettled` - a dead map cannot silence the others, and synth patterns
-  never wait on the network. Persistent caching of those fetches is open (TODO item 2).
+  never wait on the network. Those fetches are cached persistently since 1.0.0 (see 4i), so a
+  set reopened offline plays the sounds it played before.
 - **Export audio: the one surviving offline render.** `src/lib/render/offline.ts` is the
   0.9.x renderer kept for a *bounce*, not for playback: `exportAudio()` compiles the pattern
   fresh on the main thread (the worker's pattern lives in another thread and cannot be
@@ -388,7 +440,8 @@ and heard through the track. An instrument on the `webaudio` chain alone.
   `setSliderOverrides` into the next compile, so the pattern is re-evaluated with the new
   value. `engine.mjs` holds the capture (`beginSliderCapture`/`getSliderSpecs`) for the
   worker; `lib/render/scope.ts` carries the same for the main-thread export renderer. What
-  the dials still do NOT carry is a NAME or a RANGE (TODO item 5.3). Two findings from the 0.9.x version worth keeping:
+  the dials still do NOT carry upstream is the slider metadata itself (TODO item 7). Two
+  findings from the 0.9.x version worth keeping:
   the wrapper's rename takes on the DEVICE PANEL but never reaches the Rack macro / Live
   parameter registry (those stay `s1..s8`), and a first attempt to carry each slider's real
   min..max via runtime `_parameter_range` was reverted. **The range half is SOLVED as of
@@ -490,7 +543,7 @@ EXPORT still renders in the DEVICE PAGE, offline, and never disturbs the music -
 Studio is a different Chromium context with its own superdough singletons. It is the same
 pattern TEXT, but compiled in this page's scope, so a pattern leaning on something only
 the Studio's runtime provides bounces differently. Fixing that means a renderer in strudel
-itself: doc/TODO.md items 2 and 2d.
+itself: doc/TODO.md items 6 and 6d.
 
 `src/app/strudel/repl-shim/m4l-shim.js` is the only line of ours inside that app: it
 arms the audio (the REPL waits for a `mousedown` that a hidden window never gets),
@@ -644,8 +697,10 @@ the test for whether something is the library's. `src/app/shared/clipboard.ts` i
 deleted; the devices import `copyPath` / `copyMessage` from the bridge and behave
 exactly as before.
 
-**Unverified as of 1.0.0**, because Export never produced a file to copy the folder of
-(§2d). TODO item 1.
+**Verified in Live** on both exporting devices: the button puts the file's full path on
+the clipboard, and pasting it into Explorer finds the .wav. It is no longer the only
+handoff - Export lands the bounce in a clip itself (§2e) - but it stays, because Live
+12.0.4 and older cannot make that clip and a path is the honest answer there.
 
 ## 5. Strudel Integration
 

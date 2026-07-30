@@ -8,7 +8,7 @@
 
 This started as a fun experiment: *How cool is Strudel! Can I connect it to Ableton and control it from the Push to create the ultimate hybrid workflow?*
 
-The result is a set of **Max for Live devices** that bring [Strudel](https://strudel.cc) - the JavaScript port of TidalCycles' pattern language - natively into Ableton Live. No browser tab, no virtual MIDI cables, no sync hacks: the real `@strudel/core` engine runs headlessly inside each device, locked to Live's transport, and fully mappable to Ableton Push for hands-on control!
+The result is a set of **Max for Live devices** that bring [Strudel](https://strudel.cc) - the JavaScript port of TidalCycles' pattern language - natively into Ableton Live. No browser tab, no virtual MIDI cables, no sync hacks: the real `@strudel/core` engine runs inside each device, locked to Live's transport, and fully mappable to Ableton Push for hands-on control. The main device goes further and runs the whole of strudel.cc - the actual app, offline, in a window - as the track's instrument.
 
 ![Devices overview - Gugelhupf MIDI, Drums MIDI, Drums Sampler, Audio FX and the sample browser](doc/screenshot-all-devices.png)
 
@@ -43,6 +43,7 @@ Once downloaded, simply extract the ZIP file and copy the `.amxd` devices into y
 
 ![Exporting MIDI and applying effects](doc/screenshot-strudel-midi-export-and-effects.gif)
 
+- **Bounce a pattern into a clip, in one press.** Export renders the pattern to a WAV and puts it **straight into the highlighted clip slot** - named after your pattern, warped, and looped over exactly the cycles that were rendered, so it plays in time instead of being warped by guess. Use **Gugelhupf Audio** for it: an audio track is the only thing Live will put an audio clip on, so that flavour bounces into the track it is already sitting on. On a MIDI track the file is still written and one button offers a new audio track. Copying the file's path still works everywhere, and is the answer on Live 12.0.4 and older, which cannot make the clip.
 - **Room to type, help that follows you.** A **Full Studio** floating window (from **About > Advanced**) is a big editor over the same pattern as the device view (one pattern, one scheduler), and every Gugelhupf-taking device has a `?` opening a pinned reference of exactly what THESE devices support - per device, offline, with an honest works / not-yet status on every entry, narrowing to whatever your caret is on.
 - **A synth you play with your hands.** The **Gugelhupf Synth** takes a SOUND rather than a pattern - `s("sawtooth").lpf(800).room(.3)` - and every MIDI note the track sends plays it. Your clip, your keyboard or another Gugelhupf device in front is the trigger, and any `slider()` in the sound lands on a native knob, so the timbre automates and reaches Push.
 - **It keeps its sounds when the network goes.** Every sample and sample map any device fetches is cached in the device page, so a set reopened offline still plays the sounds it played before. Synths never needed the network at all.
@@ -59,6 +60,7 @@ We also deliver **additional utility instruments** that showcase different capab
 | Device | Type | What it does for you |
 |---|---|---|
 | **Gugelhupf** (`alienmind-gugelhupf.amxd`) | Instrument | **ALL of Strudel as the track's audio.** Its Studio window is the REAL local strudel.cc - the whole app, offline, with its own editor, scheduler and visualisers - and what you evaluate there IS the track. The pattern saves with your Live set, Live's transport drives it, and a `slider()` or `m4lKnob()` in the pattern lands on a native dial carrying its own name, unit and range. The device view is a second face of the same pattern - a visualizer, a bank of faders, and a small editor over the very text the Studio holds, so an edit in one shows up in the other and Play always drives one engine. |
+| **Gugelhupf Audio** (`alienmind-gugelhupf-audio.amxd`) | Audio effect | **The same device, on an audio track** - same Studio, same pattern, same knobs, and whatever the track already carries passes straight through with the pattern added to it. What it can do that the instrument cannot is **bounce into a clip**: Export renders the pattern and drops it in the highlighted slot of the track it is on, warped and looped to the cycles it rendered. Bouncing also switches the transport **Follow** off, so the next Play sounds the clip rather than both. |
 | **Gugelhupf MIDI** (`alienmind-gugelhupf-midi.amxd`) | MIDI effect | Allows you to sequence notes and pass it to any instrument. It also allows you to translate Strudel patterns to the piano roll and vice versa. It streams live MIDI tempo-locked to Live, following tempo changes, multi-channel via `.midichan()`. Scale-aware (follows Live 12's key). |
 | **Gugelhupf Drums MIDI** (`alienmind-gugelhupf-drums-midi.amxd`) | MIDI effect | Allows you to map drum patterns that would normally sound as sounds into MIDI notes that can be sequenced to a drum rack. A dedicated mapping UI routes drum words (`bd`, `sd`, `hh`) to specific Drum Rack pads, and the map travels with your set. |
 | **Gugelhupf Synth** (`alienmind-gugelhupf-synth.amxd`) | Instrument | **One superdough sound, played by your MIDI.** Type a sound rather than a pattern - `s("sawtooth").lpf(800).room(.3)` - and every note the track sends plays it. No transport and no Play button: your clip, your keyboard or another Gugelhupf device in front is the trigger. Any `slider()` in the sound lands on a native knob (S1..S8), so the timbre automates and reaches Push. |
@@ -137,13 +139,13 @@ track's **Track Delay to -66 ms**.
 pnpm install
 git submodule update --init   # strudel/ - the engine is bundled from here
 pnpm test          # vitest: mini-notation parser + headless engine tests
-pnpm build         # → dist/m4l-gugelhupf/alienmind-gugelhupf.amxd + the six -<name>.amxd
+pnpm build         # → dist/m4l-gugelhupf/alienmind-gugelhupf.amxd + the seven -<name>.amxd
                     #   + dist/m4l-gugelhupf.zip (release archive incl. installers)
 pnpm dev:midi       # browser dev for the MIDI device, mocked Live beside it
 pnpm dev:drums-midi # browser dev for the Drums MIDI device
 pnpm dev:sample-browser # browser dev for the sample browser
 pnpm dev:fx         # browser dev for the Audio FX device
-pnpm dev:gugelhupf    # browser dev for the main Gugelhupf device
+pnpm dev:strudel    # browser dev for the main Gugelhupf device (and the audio flavour - one page)
 pnpm dev:synth      # browser dev for the Synth device
 pnpm install:device # automatically copy the compiled devices to your local Ableton User Library)
 ```

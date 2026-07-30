@@ -16,6 +16,9 @@ Bring generative sequencing, euclidean rhythms, and algorithmic composition dire
 
 ## New in 1.3.0
 
+- **Export lands in a clip.** Press Export and the pattern is rendered and dropped straight into the highlighted clip slot - warped, and looped over exactly the cycles that were rendered, so it plays in time rather than being warped by guess. The copy-the-path-and-drag-it-in dance is gone.
+- **A new device: Gugelhupf Audio.** The same device, the same Studio, the same pattern - as an *audio effect*, so it sits on an audio track. Live only puts an audio clip on an audio track, so this is the flavour that bounces into the track it is already on. On a MIDI track the instrument still writes the file and offers one button, which makes a new audio track and puts it there.
+- **A transport Follow switch**, and bouncing turns it off. A clip in the track is the pattern already recorded; leaving the pattern following Live's Play as well would sound both at once. Follow is a real Live parameter, so it is automatable, mappable and saved with your set.
 - **"Copy folder path" works before you have exported anything.** The button used to appear only once a file had been written, which made it useless on a device whose Export was failing - exactly when you want to go and look in the folder. It now follows the device folder, which is known as soon as the device loads.
 
 ## New in 1.2.0
@@ -52,6 +55,7 @@ We also deliver a set of specialized, lightweight devices - some translating Str
 | **Gugelhupf MIDI** | MIDI effect, **MIDI track** | Type a Strudel pattern, press **Run**, and it streams live MIDI into whatever instrument sits after it. Also converts patterns **to and from MIDI clips**. |
 | **Gugelhupf Drums MIDI** | MIDI effect, **MIDI track** | The same generative power as Gugelhupf MIDI, focused on drums. Visual **Kit** mapper routes drum words (`bd`, `sd`) directly to Drum Rack pads. |
 | **Gugelhupf Drums Sampler** | Instrument, **MIDI track** | A code-driven drum sampler. Write `s("bd sd, hh*8")`, pick a drum machine **bank**, and it plays that machine's sounds. |
+| **Gugelhupf Audio** | Audio effect, **audio track** | The main device on an audio track: same Studio, same pattern, same knobs, and whatever the track carries passes through with the pattern added. The one flavour that can **bounce its pattern into a clip** on its own track. |
 | **Gugelhupf Audio FX** | Audio effect, **audio track** | Type a single line of Strudel's DSP effect vocabulary (e.g., `.lpf(800).gain(1.2)`) and it generates a real Max signal chain on the track. |
 | **Gugelhupf Samples** | Instrument, **MIDI track** | Browse Strudel's sample-map universe. Audition samples beat-synced to your project and drag them straight into a Drum Rack. |
 
@@ -77,7 +81,7 @@ Type any Strudel pattern - whether it's synthesizers like `s("sawtooth")`, sampl
 
 **One limitation worth knowing: Freeze does not work on this device.** Live's Freeze renders a track offline and faster than real time, and the device's sound comes from a live browser engine that cannot run in that offline pass - so a frozen track goes silent. This is a property of how Live freezes, not something the device can work around. Two things do work, and either gives you the same result:
 
-- **Export** (the download icon) renders the pattern to a `.wav` next to the device. Use **Copy folder path** (the clipboard icon) to get the folder, paste it into Explorer/Finder, and drag the file onto an audio track.
+- **Export** (the download icon) renders the pattern to a `.wav` next to the device and puts it straight into a clip. Use **Gugelhupf Audio** on an audio track for that - it bounces into the slot you clicked. On a MIDI track the file is still written and one button offers a new audio track; **Copy folder path** (the clipboard icon) also still gives you the file's full path, which is the answer on Live 12.0.4 and older, where Live cannot make the clip.
 - **Resample** the track onto an audio track while it plays, the normal Live way.
 
 **Launching a clip on the track starts it.** You do not have to press Run as well: launch a clip on the device's track and the pattern starts; stop the clip and it stops. On a track with no clips at all, Live's global Play does the same job. Run and the mappable **Play/Stop** parameter still work, and whichever moved last wins.
@@ -151,9 +155,10 @@ Brings Strudel's chainable DSP vocabulary to any audio track. Type a chain of St
 
 
 
-### Strudel Sample Browser (`alienmind-gugelhupf-sample-browser.amxd`)
+### Gugelhupf Samples (`alienmind-gugelhupf-sample-browser.amxd`)
 
-A browser for the community sample maps behind strudel.cc. Drop it on any audio track.
+A browser for the community sample maps behind strudel.cc. It is an instrument (it makes
+the preview sound), so drop it on a MIDI track.
 - Browse curated community sample maps (dough-samples, Dirt-Samples, clean-breaks).
 - Audition samples beat-synced to your project's launch quantization.
 - Drag the auditioned row straight into a Simpler, a Drum Rack, or an audio track.

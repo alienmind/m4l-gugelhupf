@@ -1,26 +1,36 @@
 # What Strudel does, and what these devices do with it
 
-Strudel is a language for making **sound**. This project brings Strudel to Ableton Live through two distinct paradigms: the monolithic **Superdough** device, and the **Micro Devices** (MIDI, FX, Sampler).
+Strudel is a language for making **sound**. This project brings it into Ableton Live two
+different ways, and how much of the language you get depends entirely on which device you
+are holding.
 
-The level of support depends entirely on which device you are using.
+- **The Gugelhupf devices** (`alienmind-gugelhupf`, `-audio`) run the REAL engine.
+  Everything strudel.cc plays, they play, because it *is* superdough.
+- **The micro devices** (MIDI, Drums MIDI, Audio FX, Drums Sampler) do not synthesise.
+  They translate Strudel into native Ableton MIDI or into a Max DSP chain, so the pattern
+  *language* is fully supported and the *sound engine* is not.
 
+## Preliminary question: why not just run Strudel's audio engine in real time?
 
-## Preliminary question: Why not just run Strudel's audio engine in real-time so we support everything?
+It does, and that is the main device. The answer used to be that it could not: Chromium's
+`AudioContext` went to the system output, outside Live entirely - not down the track, not
+through your effects, not into your render - so the engine rendered offline to a WAV and
+Max played the file back.
 
-The engine runs inside `[jweb]`, which is an embedded Chromium view, and Chromium has a perfectly good `AudioContext`. It is the obvious idea and it does not work: **Chromium's audio graph and Live's signal chain do not touch.** 
+**That is history.** `[jweb~]` is a browser view whose Web Audio output is a signal on the
+device's outlets, so the page's sound IS the track: through the fader, the sends, the
+meters, and into a resample. The offline renderer survives for one job only - **Export**,
+which bounces the pattern to a file and drops it in a clip.
 
-Sound produced in the device's browser view goes directly to your system output device, outside Ableton entirely - not down the track, not through your effects, not into your render.
-
-That is why this project takes two paths:
-1. **Superdough** renders the audio *offline* to a hidden WAV file, loads it into a Max `[buffer~]`, and plays it back through the track.
-2. **Micro Devices** avoid audio generation entirely, instead translating Strudel math into native MIDI notes or Max DSP parameters that Live understands in real-time.
-
+What has not changed is the direction of travel: `[jweb~]` has audio OUT and no audio IN.
+A page can never be handed the track's audio, which is why the FX device processes sound
+in Max rather than in a page.
 
 ---
 
-## 1. Strudel (The Main Instrument)
+## 1. Gugelhupf (the main instrument)
 
-The **Strudel** device (`alienmind-gugelhupf`) uses Strudel's real audio engine to render audio directly into your Ableton track.
+**Gugelhupf** (`alienmind-gugelhupf`, and `alienmind-gugelhupf-audio`) uses Strudel's real audio engine to render audio directly into your Ableton track.
 
 ### Supported: Almost Everything
 
@@ -29,6 +39,11 @@ Because it uses the real `@strudel/superdough` engine under the hood, **everythi
 - **Samples:** `s("bd sd")`, `s("gabba")` - sample fetching and playback works.
 - **Audio Effects:** `.room()`, `.lpf()`, `.crush()`, `.delay()` - all pattern-attached audio effects work exactly as they do on the web.
 - **Multi-line:** `$:`, `stack()`, orbits, etc.
+
+That claim is stronger than it sounds, and it is structural rather than a promise to keep
+up: the sound is made by a **full local strudel.cc** - the actual app, built offline,
+running in the Studio window - and the device view is a second view of the same pattern.
+There is no second implementation of the language here to fall behind.
 
 ### Controls: `slider()`, and what m4l adds to it
 
@@ -39,9 +54,16 @@ A `slider()` in your pattern lands on one of the device's eight native dials
 s("sawtooth").lpf(slider(500, 100, 1000))
 ```
 
-The dial takes the slider's REAL range - it travels 100..1000, not 0..1 - and starts at
-the value the code declares. Turning it changes the sound immediately, with no
-re-evaluation, exactly as dragging the inline slider does.
+Turning it changes the sound immediately, with no re-evaluation, exactly as dragging the
+inline slider does.
+
+**The dial itself travels 0..1, and the page does the scaling.** It used to take the
+slider's real 100..1000, until that was measured to cost the dial its automation lane and
+any Rack macro mapped to it - Live binds those against the parameter as the frozen device
+declares it, so widening the domain underneath them leaves a macro writing 0.5 into a
+control that now spans 100..1000. The fader and the readout in the device view show the
+real value; the dial is the one place that reads 0.44. That trade is deliberate: a
+labelled control you cannot automate is worth less than an automatable one.
 
 A slider can also say what it IS, with an optional options object:
 
@@ -72,23 +94,43 @@ Two honest limits:
 `m4lKnob(n, { name, unit, range })` still exists and does the same job for patterns that
 want a dial without declaring a slider.
 
+### Two flavours, and only one of them can bounce into a clip
+
+`alienmind-gugelhupf` is an INSTRUMENT and lives on a MIDI track.
+`alienmind-gugelhupf-audio` is the same page, the same Studio and the same pattern
+declared as an AUDIO EFFECT, so it lives on an audio track and whatever the track already
+carries passes straight through with the pattern added to it.
+
+The difference that matters is Export. Live puts an audio clip on an audio track and
+nowhere else, and a device can only ever act on the track it is on - a device's view is
+only on screen while its own track is selected, so the clip slot Live calls "highlighted"
+is always one of its own. So the audio flavour bounces into the slot you clicked; the
+instrument writes the file and offers one button, which makes a new audio track and puts
+it there.
+
 ### Limitations & Exceptions
 
 - **Not Yet MIDI Aware:** this device does not currently process inbound MIDI notes from
-  Ableton (see doc/TODO.md).
+  Ableton (doc/TODO.md item 3). For that today, use **Gugelhupf Synth**.
+- **Freeze does not work.** Live freezes a track by rendering it offline and faster than
+  real time; this device's sound comes from a live browser engine that cannot run in that
+  pass, so a frozen track goes silent. Export, or resample the track.
 - **Export renders the pattern in the DEVICE PAGE's scope**, not in the Studio's runtime.
   It is the same pattern text, but a pattern leaning on something only the Studio provides
-  bounces differently, or not at all. Being resolved; see doc/TODO.md.
+  bounces differently, or not at all. doc/TODO.md item 6.
+- **A long tail is cut off.** The bounce renders exactly the cycles the pattern repeats
+  over, so a `.room()` or a long `.delay()` is truncated at the loop point and the clip
+  clicks. doc/TODO.md item 2.
 
 ---
 
 ## 2. The Micro Devices (MIDI, FX, Sampler)
 
-The micro devices (`Strudel MIDI`, `Strudel Drums MIDI`, `Strudel Audio FX`, `Strudel Drums Sampler`) do not use the superdough synthesis engine. Instead, they translate Strudel code into native Ableton MIDI or Max DSP.
+The micro devices (`Gugelhupf MIDI`, `Gugelhupf Drums MIDI`, `Gugelhupf Audio FX`, `Gugelhupf Drums Sampler`) do not use the superdough synthesis engine. Instead, they translate Strudel code into native Ableton MIDI or Max DSP.
 
 For these devices, the *pattern language* is 100% supported, but the *sound engine* is **not**.
 
-### A. Strudel MIDI
+### A. Gugelhupf MIDI
 
 If the pattern produces notes, this device plays them and can freeze them into a clip.
 
@@ -131,7 +173,7 @@ bd sd bd sd          // Bare mini-notation maps drum words to Drum Rack pads
 `.s()`, `.bank()`, `.room()`, `.lpf()`, `.hpf()`, `.delay()`, `.crush()`, `.pan()`, `.speed()`, `.attack()`, `.release()`, `.vowel()`, `.coarse()`, `.shape()`, `.dist()`...
 These do not error. The pattern plays; the property is dropped because there is no synthesiser here. `note("c3").room(0.5)` is just `note("c3")`. If you want reverb, put a native Ableton reverb plugin after the device!
 
-### B. Strudel Audio FX
+### B. Gugelhupf Audio FX
 
 One line of Strudel's effect vocabulary, applied to the audio already on the track. 
 
@@ -141,7 +183,7 @@ The DSP graph is written when the device is built. **Your line only chooses valu
 - **Supported:** `.lpf(hz)` / `.cutoff(hz)`, `.hpf(hz)` / `.hcutoff(hz)`, `.drive(x)`, `.crush(bits)`, `.delay(x)`, `.delaytime(ms)`, `.delayfeedback(x)`, `.room(x)`, `.gain(x)`. Values are in real units and modulate in real time!
 - **Refused:** `.pan()`, `.distort()`, `.reverb()`, `.shape()`, `.coarse()`, `.vowel()`, `.phaser()`. These are recognised as real Strudel effects but have no Max chain behind them yet. The device will tell you it's refused. Modulated values like `.lpf(sine)` are also supported, but complex modulations might be refused if unsupported by the bridge.
 
-### C. Strudel Drums Sampler
+### C. Gugelhupf Drums Sampler
 
 The one micro device where `s()` is not a footgun but the whole point. It plays samples itself from a **drum-machine bank**.
 

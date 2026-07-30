@@ -3,6 +3,31 @@
 High-level history of m4l-gugelhupf, grouped by milestone release. Up to 1.0.0 each
 minor version was a milestone of its own. Newest first.
 
+## 1.3.0 - a bounce lands in a clip
+
+**Export puts the WAV straight into a clip slot.** It renders as before, and then calls
+`createAudioClip()` (new upstream in m4l-jweb 1.3.0): the clip is named, warped, and
+looped over exactly the cycles that were rendered, because the page chose the cycle count
+and the cps and Live would otherwise infer a grid from transients. The five manual steps
+between a render and a clip - copy the path, paste it into Explorer, find the file, drag
+it in - are gone. The copy-path button stays, for Live 12.0.4 and older where the call
+exists and does nothing.
+
+**`alienmind-gugelhupf-audio`** - the same device, the same Studio and the same pattern,
+declared as an AUDIO EFFECT. Live puts an audio clip on an audio track and nowhere else,
+and an instrument on a MIDI track can never target another one from its own view: a
+device's view is only on screen while its track is selected, so the highlighted clip slot
+is always one of its own. On an audio track that stops being a problem - the bounce lands
+in the track the device is already on. `webaudio` sums the page onto the device input, so
+whatever the track carried still passes through. The instrument flavour writes the file
+and offers one button: bounce to a new audio track.
+
+**A transport FOLLOW switch**, and bouncing turns it off. A clip in the device's own
+track is the pattern already recorded, so the next Play would sound both a few
+milliseconds apart. `follow` is a real Live parameter - automatable, mappable, saved with
+the set - and it gates only Live's transport starting the pattern, never Run and never
+automation written against `play`.
+
 ## 1.1.0 - 2026-07-22
 
 **The Studio is the instrument.** The Strudel device's sound is no longer made in the
