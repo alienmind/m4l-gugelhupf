@@ -47,6 +47,10 @@ jobs:
         run: pnpm build:repl
 
       - run: pnpm build
+        # The ZIP carries the manual, so a runner that cannot render it must fail here
+        # rather than publish a release with the PDF quietly missing.
+        env:
+          MANUAL_REQUIRE_PDF: "1"
       - run: pnpm test
 
       - name: github release
