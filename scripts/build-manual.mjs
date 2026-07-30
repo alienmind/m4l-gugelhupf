@@ -16,9 +16,16 @@
  * ubuntu runners ship Google Chrome. So `puppeteer-core` drives whichever is there.
  *
  * IT FAILS SOFT, ON PURPOSE. No browser means no PDF, a warning, and exit 0 - a manual is
- * never worth failing a build that produced every device correctly. The HTML is always
- * written, so `Ctrl+P` from any browser is the manual fallback, and the packaging step
- * skips a doc that is not there (`docs` in patcher/devices.mjs).
+ * never worth failing a developer's build that produced every device correctly. The HTML is
+ * always written, so `Ctrl+P` from any browser is the fallback, and the packaging step skips
+ * a doc that is not there (`docs` in patcher/devices.mjs).
+ *
+ * ...EXCEPT WHEN THE ARTEFACT IS THE POINT. `MANUAL_REQUIRE_PDF=1` makes a failure fatal,
+ * and the release workflow sets it: shipping a ZIP that quietly lost its manual is the one
+ * situation where failing soft is the wrong answer. GitHub's ubuntu runners carry Google
+ * Chrome (image readme: "Google Chrome 150", "Chromium 150"), so the detection below finds
+ * /usr/bin/google-chrome; if an image ever drops it, that flag is what turns a silent
+ * omission into a red build.
  */
 import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
@@ -29,7 +36,7 @@ import MarkdownIt from "markdown-it";
 import puppeteer from "puppeteer-core";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const SOURCE = path.join(root, "USERSMANUAL.md");
+const SOURCE = path.join(root, "doc", "USERSMANUAL.md");
 const OUT_DIR = path.join(root, "dist", "manual");
 const HTML = path.join(OUT_DIR, "USERSMANUAL.html");
 const PDF = path.join(OUT_DIR, "USERSMANUAL.pdf");
@@ -93,7 +100,9 @@ function findBrowsers() {
 function resolveImages(html) {
   return html.replace(/<img src="([^"]+)"([^>]*)>/g, (whole, src, rest) => {
     if (/^https?:/.test(src)) return whole; // remote: leave it, and let the print time out on its own
-    const abs = path.join(root, src);
+    // Relative to the MANUAL, not to the repo - the two stopped being the same
+    // directory when it moved into doc/.
+    const abs = path.join(path.dirname(SOURCE), src);
     if (!existsSync(abs)) {
       console.warn(`m4l-gugelhupf: manual image ${src} is missing - left out of the PDF`);
       return `<p class="missing-figure">[screenshot: ${path.basename(src)}]</p>`;
@@ -111,6 +120,19 @@ const STYLE = `
     color: #1a1a1a; margin: 0;
   }
   h1 { font-size: 26pt; letter-spacing: -0.4pt; margin: 0 0 6pt; }
+  /* The title page: its own sheet, centred, and nothing else on it. */
+  .titlepage {
+    break-after: page; height: 235mm;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    text-align: center;
+  }
+  .titlepage img { width: 78mm; max-width: 78mm; border: none; margin-bottom: 14mm; }
+  .titlepage h1 { font-size: 25pt; line-height: 1.25; margin: 0 0 10mm; max-width: 150mm; border: none; }
+  .titlepage h2 {
+    font-size: 13pt; font-weight: 500; letter-spacing: 1.5pt; color: #666;
+    border: none; margin: 0 0 16mm; padding: 0;
+  }
+  .titlepage em { font-size: 11.5pt; color: #555; }
   h1 + p { font-size: 12pt; color: #444; }
   h2 {
     font-size: 15pt; margin: 22pt 0 6pt; padding-bottom: 3pt;
@@ -147,7 +169,11 @@ async function main() {
 
   const { version } = JSON.parse(readFileSync(path.join(root, "package.json"), "utf8"));
   const md = new MarkdownIt({ html: true, linkify: true, typographer: false });
-  const body = resolveImages(md.render(readFileSync(SOURCE, "utf8")));
+  // The title page carries the version, and a number written by hand goes stale the first
+  // time nobody remembers to change it. The markdown keeps a readable `## v1.3.0` so it
+  // reads correctly on GitHub too; what SHIPS is package.json's.
+  const source = readFileSync(SOURCE, "utf8").replace(/^## v\d+\.\d+\.\d+\s*$/m, `## v${version}`);
+  const body = resolveImages(md.render(source));
 
   const html = `<!doctype html>
 <html lang="en"><head><meta charset="utf-8">
@@ -168,10 +194,13 @@ async function main() {
       console.warn(`m4l-gugelhupf: ${path.basename(browser)} did not render the PDF - ${e.message.split("\n")[0]}`);
     }
   }
-  console.warn(
-    "m4l-gugelhupf: the PDF was NOT built - no Chromium here would render it.\n" +
-      "  Set MANUAL_CHROME to a browser executable, or open dist/manual/USERSMANUAL.html and print it.",
-  );
+  const message =
+    "the PDF was NOT built - no Chromium here would render it.\n" +
+    "  Set MANUAL_CHROME to a browser executable, or open dist/manual/USERSMANUAL.html and print it.";
+  // A release without its manual is a broken release, and a broken build is how you find
+  // that out. Everywhere else this is a warning and the build carries on.
+  if (process.env.MANUAL_REQUIRE_PDF) throw new Error(message);
+  console.warn(`m4l-gugelhupf: ${message}`);
 }
 
 async function renderPdf(executablePath) {
@@ -186,7 +215,15 @@ async function renderPdf(executablePath) {
     // browser that started perfectly. And a FRESH one, because a browser that died leaves
     // a lock behind and the next run refuses the directory it was given.
     userDataDir: profile,
-    args: ["--allow-file-access-from-files", "--no-first-run", "--no-default-browser-check"],
+    args: [
+      "--allow-file-access-from-files",
+      "--no-first-run",
+      "--no-default-browser-check",
+      // CI: the sandbox needs privileges a container may not have, and /dev/shm is
+      // routinely too small for Chrome's default shared memory - the classic
+      // "Target closed" in a runner. Neither costs anything on a desktop.
+      ...(process.platform === "linux" ? ["--no-sandbox", "--disable-dev-shm-usage"] : []),
+    ],
   });
   try {
     const page = await browser.newPage();

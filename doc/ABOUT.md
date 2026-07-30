@@ -37,9 +37,9 @@ Bring generative sequencing, euclidean rhythms, and algorithmic composition dire
 
 ### The Main Instrument: Strudel
 
-![The Gugelhupf device alongside the Studio window](screenshot-strudel-and-studio.png)
+![The Gugelhupf device alongside the Studio window](screenshot-gugelhupf-and-studio.png)
 
-The primary deliverable is **Gugelhupf** (`alienmind-gugelhupf`, called `alienmind-gugelhupf-superdough` before 1.0.0). This instrument understands the full Strudel language and uses the real `@strudel/superdough` engine to natively produce sounds (synths, oscillators, samples) and effects, perfectly in sync with Ableton's transport clock.
+The primary deliverable is **Gugelhupf** (`alienmind-gugelhupf`). This instrument understands the full Strudel language and uses the real `@strudel/superdough` engine to natively produce sounds (synths, oscillators, samples) and effects, perfectly in sync with Ableton's transport clock.
 
 > ⚠️ **Experimental Limitations:** superdough now runs LIVE in the device, so edits and knob turns are audible immediately and there is no loop boundary to wait for. What remains:
 > - **No MIDI in:** it sequences its own pattern rather than playing notes you send it. For that, use **Gugelhupf Synth**.
@@ -87,9 +87,9 @@ Type any Strudel pattern - whether it's synthesizers like `s("sawtooth")`, sampl
 
 **Launching a clip on the track starts it.** You do not have to press Run as well: launch a clip on the device's track and the pattern starts; stop the clip and it stops. On a track with no clips at all, Live's global Play does the same job. Run and the mappable **Play/Stop** parameter still work, and whichever moved last wins.
 
-![Strudel playing with its Studio window and sliders](screenshot-strudel-play-and-studio-with-sliders.gif)
+![Strudel playing with its Studio window and sliders](screenshot-gugelhupf-play-and-studio-with-sliders.gif)
 
-![Strudel driving a drum rack and effects](screenshot-strudel-drum-rack-and-effects.gif)
+![Strudel driving a drum rack and effects](screenshot-gugelhupf-drum-rack-and-effects.gif)
 
 ### Gugelhupf Audio (`alienmind-gugelhupf-audio.amxd`)
 
@@ -107,12 +107,9 @@ your pattern already recorded; with Follow on, pressing Play would sound both, a
 milliseconds apart. Click the icon to follow the transport again. It is a real Live
 parameter, so it automates, maps and saves with the set.
 
-<!-- SCREENSHOT (to take): screenshot-gugelhupf-audio-clip.png - this device on an audio track,
-     the bounced clip in the clicked slot, Follow unlinked. -->
+![The bounce, in the slot that was clicked](screenshot-gugelhupf-audio-clip.png)
 
-<!-- SCREENSHOT (to take): screenshot-gugelhupf-new-track.png - the instrument flavour on a MIDI
-     track after Export: the status line explaining a MIDI track takes no audio clip, with the
-     extra "new audio track" button showing beside Export. -->
+![On a MIDI track, a new audio track is offered instead](screenshot-gugelhupf-new-track.png)
 
 ### Gugelhupf Synth (`alienmind-gugelhupf-synth.amxd`)
 
@@ -126,10 +123,7 @@ Two things to know:
 
 Any `slider()` in the sound (`.lpf(slider(1200, 100, 8000))`) binds to one of the eight native knobs (**S1..S8**), so you can automate the timbre or turn it from Push.
 
-![Strudel knobs showing slider parameters](screenshot-strudel-knobs.png)
-
-<!-- SCREENSHOT (to RETAKE): screenshot-strudel-knobs.png - the native panel's first row is now
-     Play AND Follow, not Play alone. -->
+![Strudel knobs showing slider parameters](screenshot-gugelhupf-knobs.png)
 
 ### Gugelhupf MIDI (`alienmind-gugelhupf-midi.amxd`)
 
@@ -141,11 +135,11 @@ Two workflows in one device:
 
 ![Clip export and import - a pattern frozen to a MIDI clip, and read back](screenshot-midi-export-import.png)
 
-![Exporting MIDI and applying effects](screenshot-strudel-midi-export-and-effects.gif)
+![Exporting MIDI and applying effects](screenshot-gugelhupf-midi-export-and-effects.gif)
 
 The editor features a native **Play/Stop** panel for macro-mapping, and a comprehensive **Help (?)** reference tailored to exactly what the device supports.
 
-![The Strudel reference window](strudel-help.png)
+![The Strudel reference window](gugelhupf-help.png)
 
 ### Gugelhupf Drums MIDI (`alienmind-gugelhupf-drums-midi.amxd`)
 

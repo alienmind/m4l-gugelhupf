@@ -31,7 +31,7 @@ Once downloaded, simply extract the ZIP file and copy the `.amxd` devices into y
 - **Generative sequencing in one line.** `note("c3 e3 g3 b3").sometimesBy(.3, x=>x.fast(2))` is a whole evolving part. Euclidean rhythms, polymeter, per-cycle alternation - things that are tedious to click into a piano roll are one expression in Strudel.
 - **The ultimate hybrid workflow.** By exposing Strudel's engine states directly to Live, you can map them to your **Ableton Push** or external MIDI controllers. Start and stop complex algorithmic sequences with physical hardware!
 
-![Strudel driving a drum rack and effects](doc/screenshot-strudel-drum-rack-and-effects.gif)
+![Strudel driving a drum rack and effects](doc/screenshot-gugelhupf-drum-rack-and-effects.gif)
 - **A dedicated drum machine.** The new **Gugelhupf Drums MIDI** device brings Strudel's generative drum language (`bd`, `sd`, `hh`) straight to your Ableton Drum Racks. It features a visual **Kit** mapper that natively persists in your Live set, letting you easily route algorithmic sequences to any custom kit!
 
 ![Gugelhupf Drums MIDI Kit Mapping](doc/screenshot-midi-drums-mapping.png)
@@ -41,17 +41,13 @@ Once downloaded, simply extract the ZIP file and copy the `.amxd` devices into y
 - **It's really Live-native.** Launch a clip on the device's track and the pattern starts; stop it and the pattern stops. On a track with no clips, Live's own Play does the same. Patterns start on the bar, follow tempo automation, and notes land on the track the device sits on. Everything renders inside the device UI.
 - **From sketch to clip.** The MIDI device can freeze any pattern into a regular MIDI clip (and read clips back into mini-notation), so generative sketches become ordinary arrangeable material. It also doubles as a two-way translator for *understanding* Strudel: freeze a pattern you cannot quite read into a clip and **see** it in the piano roll, or drop a clip you already know and read its mini-notation - each side explains the other.
 
-![Exporting MIDI and applying effects](doc/screenshot-strudel-midi-export-and-effects.gif)
+![Exporting MIDI and applying effects](doc/screenshot-gugelhupf-midi-export-and-effects.gif)
 
 - **Bounce a pattern into a clip, in one press.** Export renders the pattern to a WAV and puts it **straight into the highlighted clip slot** - named after your pattern, warped, and looped over exactly the cycles that were rendered, so it plays in time instead of being warped by guess. Use **Gugelhupf Audio** for it: an audio track is the only thing Live will put an audio clip on, so that flavour bounces into the track it is already sitting on. On a MIDI track the file is still written and one button offers a new audio track. Copying the file's path still works everywhere, and is the answer on Live 12.0.4 and older, which cannot make the clip.
-<!-- SCREENSHOT (to take): doc/screenshot-gugelhupf-audio-clip.png - alienmind-gugelhupf-audio
-     on an audio track, the bounced clip sitting in the slot that was clicked, Follow unlinked.
-     Caption: "Export, once: the pattern rendered, warped and in the clip slot." -->
+![Export, once: the pattern rendered, warped and in the clip slot](doc/screenshot-gugelhupf-audio-clip.png)
 
 - **...and on a MIDI track, Export writes the NOTES.** The instrument flavour offers a second export that writes the pattern as a regular MIDI clip on its own track - the notes it is about to play, captured from the pattern rather than by rewriting your code, so what you hear does not change. Samples and effects have no MIDI form, so a pattern of `s("bd sd")` writes an empty clip and tells you why.
-<!-- SCREENSHOT (to take): doc/screenshot-gugelhupf-midi-clip.png - the instrument flavour on a
-     MIDI track with the notes button visible, and the MIDI clip it wrote open in the piano roll.
-     Caption: "The same pattern as notes, on a MIDI track." -->
+![The same pattern as notes, on a MIDI track](doc/screenshot-gugelhupf-midi-clip.png)
 
 - **Room to type, help that follows you.** A **Full Studio** floating window (from **About > Advanced**) is a big editor over the same pattern as the device view (one pattern, one scheduler), and every Gugelhupf-taking device has a `?` opening a pinned reference of exactly what THESE devices support - per device, offline, with an honest works / not-yet status on every entry, narrowing to whatever your caret is on.
 - **A synth you play with your hands.** The **Gugelhupf Synth** takes a SOUND rather than a pattern - `s("sawtooth").lpf(800).room(.3)` - and every MIDI note the track sends plays it. Your clip, your keyboard or another Gugelhupf device in front is the trigger, and any `slider()` in the sound lands on a native knob, so the timbre automates and reaches Push.
@@ -60,7 +56,7 @@ Once downloaded, simply extract the ZIP file and copy the `.amxd` devices into y
 
 ## What's in the box
 
-![The Gugelhupf device - a full Strudel expression playing as the track's audio](doc/screenshot-strudel.png)
+![The Gugelhupf device - a full Strudel expression playing as the track's audio](doc/screenshot-gugelhupf.png)
 
 The main deliverable is one mini instrument **Gugelhupf** (`alienmind-gugelhupf`) that understands the full Strudel language (with some exceptions, see [STRUDEL-SUPPORT.md](doc/STRUDEL-SUPPORT.md)) and sequences notes, sounds and effects natively with the superdough engine, in sync with Ableton's transport clock.
 
@@ -80,7 +76,7 @@ We also deliver **additional utility instruments** that showcase different capab
 
 ## Controls: your sliders on Ableton's knobs
 
-![Strudel playing with Studio and sliders](doc/screenshot-strudel-play-and-studio-with-sliders.gif)
+![Strudel playing with Studio and sliders](doc/screenshot-gugelhupf-play-and-studio-with-sliders.gif)
 
 A `slider()` in your pattern becomes one of the device's eight native dials, in source
 order - automatable, MIDI-mappable, on Push:
@@ -160,7 +156,7 @@ pnpm build:manual   # USERSMANUAL.md → dist/manual/USERSMANUAL.{html,pdf} (par
 pnpm install:device # automatically copy the compiled devices to your local Ableton User Library)
 ```
 
-**The user manual is [USERSMANUAL.md](USERSMANUAL.md)** - a walkthrough of every device and
+**The user manual is [doc/USERSMANUAL.md](doc/USERSMANUAL.md)** - a walkthrough of every device and
 every button. `pnpm build` renders it to a PDF (`scripts/build-manual.mjs`: markdown → a
 print stylesheet → `page.pdf()` in whatever Chromium the machine already has, via
 `puppeteer-core`) and both forms ride in the release ZIP. No browser on the machine means no
