@@ -156,8 +156,16 @@ pnpm dev:sample-browser # browser dev for the sample browser
 pnpm dev:fx         # browser dev for the Audio FX device
 pnpm dev:strudel    # browser dev for the main Gugelhupf device (and the audio flavour - one page)
 pnpm dev:synth      # browser dev for the Synth device
+pnpm build:manual   # USERSMANUAL.md → dist/manual/USERSMANUAL.{html,pdf} (part of pnpm build)
 pnpm install:device # automatically copy the compiled devices to your local Ableton User Library)
 ```
+
+**The user manual is [USERSMANUAL.md](USERSMANUAL.md)** - a walkthrough of every device and
+every button. `pnpm build` renders it to a PDF (`scripts/build-manual.mjs`: markdown → a
+print stylesheet → `page.pdf()` in whatever Chromium the machine already has, via
+`puppeteer-core`) and both forms ride in the release ZIP. No browser on the machine means no
+PDF, a warning, and a build that still produced every device - set `MANUAL_CHROME` to a
+browser executable, or print `dist/manual/USERSMANUAL.html` by hand.
 
 For full details on building these devices with the underlying framework from scratch, read [doc/M4L-JWEB-GUIDE.md](doc/M4L-JWEB-GUIDE.md). Detailed architecture diagrams and concepts are found in [doc/ARCHITECTURE.md](doc/ARCHITECTURE.md).
 

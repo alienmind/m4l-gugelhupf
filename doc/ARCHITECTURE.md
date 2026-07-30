@@ -65,8 +65,35 @@ A **MIDI** device emits notes and has no signal path at all (midi, drums-midi).
 ```bash
 tsc -b                          # typecheck every device's app + the scripts
 scripts/build-ui.mjs            # ONE vite build per device → dist/ui/<device>/index.html
+scripts/build-manual.mjs        # USERSMANUAL.md → dist/manual/USERSMANUAL.{html,pdf}
 m4l-jweb build                  # @m4l-jweb/build: wrapper compile + patcher generation + amxd writer
 ```
+
+### The manual, as a PDF
+
+`USERSMANUAL.md` is the source, because that is what can be reviewed in a diff; the PDF is
+what ships, because a user who has just downloaded a Live device will not render markdown.
+`scripts/build-manual.mjs` renders markdown to a print-styled HTML page and prints it with
+`page.pdf()` - a real print, so the text is text - driving whatever Chromium the machine
+already has through `puppeteer-core`. `puppeteer` proper would download ~180 MB into a build
+that otherwise needs only Node.
+
+Three things it has to get right, and the second cost an afternoon:
+
+- **Missing images are dropped**, not left as broken-image glyphs in a document a stranger
+  is reading. A shot that has not been taken yet is an HTML comment in the markdown and
+  never reaches the renderer at all.
+- **A THROWAWAY user profile per run.** `msedge.exe` and `chrome.exe` hand their command
+  line to an already-running instance and exit 0 immediately, so puppeteer waits for a
+  debug port that never opens and reports a launch failure about a browser that started
+  fine. A fresh profile also avoids the lock a crashed browser leaves behind. Measured on
+  Windows 11: even with its own profile Edge exits 0, while Chrome renders first time -
+  which is why the candidate list is TRIED in order rather than taking the first that
+  exists, and why Chrome is first on it.
+- **It fails soft.** No browser, or none that will render, means a warning and exit 0. The
+  packaging step treats a declared doc that is not there the same way (`docs` in
+  `patcher/devices.mjs`, upstream in `@m4l-jweb/build`), so a machine with no Chromium still
+  produces every device and a ZIP with the markdown in it.
 
 This repo defines the manifest (`patcher/devices.mjs`), custom chains (`patcher/chains.mjs`), LiveAPI extensions (`wrapper/device.ts`), and the React UI (`src/app/<device>/`). The complex lifting of generating patchers and writing `.amxd` containers is handled by `@m4l-jweb/build`.
 
