@@ -27,7 +27,7 @@ Bring generative sequencing, euclidean rhythms, and algorithmic composition dire
 - **The Studio is the instrument.** The Gugelhupf device's sound is no longer made in the device view: it is made by a full local strudel.cc app running in a floating window. Its editor, its scheduler, its superdough, its visualisers. Evaluating a pattern there is what the track plays, and closing the window does not stop it.
 - **A pattern can describe a dial.** `note("c3 e3").s("sawtooth").lpf(m4lKnob(1, { name: 'cutoff', unit: 'Hz', range: [200, 2200] }))` binds directly to native dials, scaling values correctly.
 - **Three faces on the device view.** The device view now has a visualizer (fed by the window's level), a bank of vertical faders carrying whatever the pattern named, and a code editor over the same pattern the Studio holds.
-- **Native panel.** Play alone on the top row, then two rows of four dials.
+- **Native panel.** Play and Follow on the top row, then the eight dials in one row.
 
 ---
 
@@ -91,6 +91,29 @@ Type any Strudel pattern - whether it's synthesizers like `s("sawtooth")`, sampl
 
 ![Strudel driving a drum rack and effects](screenshot-strudel-drum-rack-and-effects.gif)
 
+### Gugelhupf Audio (`alienmind-gugelhupf-audio.amxd`)
+
+The main device again, as an **audio effect**, so it goes on an **audio track**. Same
+Studio, same pattern, same eight knobs; whatever the track already carries passes through
+and the pattern is added to it.
+
+The reason it exists is Export. Live puts an audio clip on an audio track and nowhere
+else, and a device can only act on the track it is on - so this is the flavour that
+bounces. Click an empty slot on its own track, press Export, and the rendered pattern is
+in that slot: named, warped, and looped over exactly the cycles that were rendered.
+
+**Bouncing switches Follow off** (the link icon in the top bar). The clip in the track is
+your pattern already recorded; with Follow on, pressing Play would sound both, a few
+milliseconds apart. Click the icon to follow the transport again. It is a real Live
+parameter, so it automates, maps and saves with the set.
+
+<!-- SCREENSHOT (to take): screenshot-gugelhupf-audio-clip.png - this device on an audio track,
+     the bounced clip in the clicked slot, Follow unlinked. -->
+
+<!-- SCREENSHOT (to take): screenshot-gugelhupf-new-track.png - the instrument flavour on a MIDI
+     track after Export: the status line explaining a MIDI track takes no audio clip, with the
+     extra "new audio track" button showing beside Export. -->
+
 ### Gugelhupf Synth (`alienmind-gugelhupf-synth.amxd`)
 
 The synth is the one device here that takes a **sound**, not a pattern. Type `s("sawtooth")`, add an envelope and effects (`.attack(0.2).lpf(800).room(.3)`), press the tick (or **Ctrl+Enter**), and every MIDI note the track sends plays that sound - from a clip, from your keyboard, or from a Gugelhupf MIDI device sitting in front of it.
@@ -104,6 +127,9 @@ Two things to know:
 Any `slider()` in the sound (`.lpf(slider(1200, 100, 8000))`) binds to one of the eight native knobs (**S1..S8**), so you can automate the timbre or turn it from Push.
 
 ![Strudel knobs showing slider parameters](screenshot-strudel-knobs.png)
+
+<!-- SCREENSHOT (to RETAKE): screenshot-strudel-knobs.png - the native panel's first row is now
+     Play AND Follow, not Play alone. -->
 
 ### Gugelhupf MIDI (`alienmind-gugelhupf-midi.amxd`)
 

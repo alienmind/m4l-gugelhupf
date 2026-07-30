@@ -44,7 +44,15 @@ Once downloaded, simply extract the ZIP file and copy the `.amxd` devices into y
 ![Exporting MIDI and applying effects](doc/screenshot-strudel-midi-export-and-effects.gif)
 
 - **Bounce a pattern into a clip, in one press.** Export renders the pattern to a WAV and puts it **straight into the highlighted clip slot** - named after your pattern, warped, and looped over exactly the cycles that were rendered, so it plays in time instead of being warped by guess. Use **Gugelhupf Audio** for it: an audio track is the only thing Live will put an audio clip on, so that flavour bounces into the track it is already sitting on. On a MIDI track the file is still written and one button offers a new audio track. Copying the file's path still works everywhere, and is the answer on Live 12.0.4 and older, which cannot make the clip.
+<!-- SCREENSHOT (to take): doc/screenshot-gugelhupf-audio-clip.png - alienmind-gugelhupf-audio
+     on an audio track, the bounced clip sitting in the slot that was clicked, Follow unlinked.
+     Caption: "Export, once: the pattern rendered, warped and in the clip slot." -->
+
 - **...and on a MIDI track, Export writes the NOTES.** The instrument flavour offers a second export that writes the pattern as a regular MIDI clip on its own track - the notes it is about to play, captured from the pattern rather than by rewriting your code, so what you hear does not change. Samples and effects have no MIDI form, so a pattern of `s("bd sd")` writes an empty clip and tells you why.
+<!-- SCREENSHOT (to take): doc/screenshot-gugelhupf-midi-clip.png - the instrument flavour on a
+     MIDI track with the notes button visible, and the MIDI clip it wrote open in the piano roll.
+     Caption: "The same pattern as notes, on a MIDI track." -->
+
 - **Room to type, help that follows you.** A **Full Studio** floating window (from **About > Advanced**) is a big editor over the same pattern as the device view (one pattern, one scheduler), and every Gugelhupf-taking device has a `?` opening a pinned reference of exactly what THESE devices support - per device, offline, with an honest works / not-yet status on every entry, narrowing to whatever your caret is on.
 - **A synth you play with your hands.** The **Gugelhupf Synth** takes a SOUND rather than a pattern - `s("sawtooth").lpf(800).room(.3)` - and every MIDI note the track sends plays it. Your clip, your keyboard or another Gugelhupf device in front is the trigger, and any `slider()` in the sound lands on a native knob, so the timbre automates and reaches Push.
 - **It keeps its sounds when the network goes.** Every sample and sample map any device fetches is cached in the device page, so a set reopened offline still plays the sounds it played before. Synths never needed the network at all.

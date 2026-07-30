@@ -776,7 +776,9 @@ When testing manually, ensure:
 │   │   ├── drums-midi/        # the Drums device: App.tsx, useStrudel.ts, DrumMapPanel.tsx
 │   │   ├── drums-sampler/     # the Drums Sampler: App.tsx, surface.ts
 │   │   ├── sample-browser/    # the sample browser: App.tsx, protocol.ts, surface.ts
-│   │   ├── strudel/           # the main Strudel device: App.tsx, useStrudelRender.ts
+│   │   ├── strudel/           # the main Strudel device AND its audio-effect flavour
+│   │   │                      #   (one page, two manifest entries): App.tsx,
+│   │   │                      #   useStrudelRender.ts (the bounce, the clip, the follow)
 │   │   ├── synth/             # the Synth device: App.tsx, useSynth.ts
 │   │   └── shared/            # shared engine and UI: PatternEditor.tsx, engine.worker.js,
 │   │                          #   useStrudelEngine.ts, webaudio.ts (decode + play), surface.ts
