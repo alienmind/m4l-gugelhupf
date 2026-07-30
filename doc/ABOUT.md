@@ -14,7 +14,7 @@ Bring generative sequencing, euclidean rhythms, and algorithmic composition dire
 
 ---
 
-## New in 1.3.0
+## New in 1.3.1
 
 - **Export lands in a clip.** Press Export and the pattern is rendered and dropped straight into the highlighted clip slot - warped, and looped over exactly the cycles that were rendered, so it plays in time rather than being warped by guess. The copy-the-path-and-drag-it-in dance is gone.
 - **A new device: Gugelhupf Audio.** The same device, the same Studio, the same pattern - as an *audio effect*, so it sits on an audio track. Live only puts an audio clip on an audio track, so this is the flavour that bounces into the track it is already on. On a MIDI track the instrument still writes the file and offers one button, which makes a new audio track and puts it there.
