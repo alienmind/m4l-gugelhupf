@@ -44,9 +44,9 @@
 	"devDependencies": {
 		"@kabelsalat/lib": "^0.4.1",
 		"@kabelsalat/web": "^0.4.1",
-		"@m4l-jweb/bridge": "link:../m4l-jweb/packages/bridge",
-		"@m4l-jweb/build": "link:../m4l-jweb/packages/build",
-		"@m4l-jweb/surface": "link:../m4l-jweb/packages/surface",
+		"@m4l-jweb/bridge": "^1.3.1",
+		"@m4l-jweb/build": "^1.3.1",
+		"@m4l-jweb/surface": "^1.3.1",
 		"@tailwindcss/vite": "^4.0.0",
 		"@tonaljs/tonal": "^4.10.0",
 		"@types/node": "^22.0.0",
