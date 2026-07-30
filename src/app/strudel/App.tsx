@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Activity, ClipboardCopy, Code, SlidersVertical } from "lucide-react";
+import { Activity, ClipboardCopy, Code, Link, ListPlus, SlidersVertical, Unlink } from "lucide-react";
 import { sendToWindow } from "@m4l-jweb/bridge";
 import { useNativePanel, useParam, useStateSync, useWindow } from "@m4l-jweb/surface/react";
 import { PatternEditor } from "../shared/PatternEditor";
@@ -49,6 +49,14 @@ export default function App() {
 	const { faders, declared } = useReplKnobs();
 	const s = useStrudelRender(!declared);
 	const [play, setPlay] = useParam(surface, "play");
+	/**
+	 * FOLLOW - whether Live's transport starts this pattern.
+	 *
+	 * It is here rather than buried in About because bouncing turns it off, and a control
+	 * that changed itself has to be visible where the change happened. On an audio track
+	 * that has just been bounced into, ON means the clip and the pattern sound together.
+	 */
+	const [follow, setFollow] = useParam(surface, "follow");
 
 	/**
 	 * RUN IS THE STUDIO'S, because the Studio is the only engine. This page edits the
@@ -139,7 +147,31 @@ export default function App() {
 				<RunButton className="ml-auto" live={!!play} onRun={run} onStop={() => setPlay(false)} />
 				{/* Allowed while playing: the bounce renders offline, in this page, and
 				    never touches the Studio's audio. */}
-				<ExportButton onExport={s.exportAudio} busy={s.exporting} />
+				<ExportButton
+					onExport={s.exportAudio}
+					busy={s.exporting}
+					title="Export: render this pattern to a WAV next to the device and put it in the highlighted clip slot. On a MIDI track the file still lands - a new audio track is then offered"
+				/>
+				{/* Only while there is something to escape TO: the last bounce could not
+				    become a clip here, and a fresh audio track is the one target that
+				    cannot refuse it. Offered, never done unasked. */}
+				{s.offerNewTrack && (
+					<Button
+						icon={ListPlus}
+						onClick={s.bounceToNewTrack}
+						title="Bounce the last export to a NEW audio track - the one clip target a MIDI track cannot refuse"
+					/>
+				)}
+				<Button
+					icon={follow ? Link : Unlink}
+					active={!!follow}
+					onClick={() => setFollow(!follow)}
+					title={
+						follow
+							? "Following Live's transport: pressing Play starts this pattern. Turn off when a bounced clip on this track should be the sound instead"
+							: "Not following Live's transport: only Run starts this pattern. Turn on to have Play start it"
+					}
+				/>
 				{/* The local strudel.cc, in its own window, playing straight into the track. */}
 				<Button onClick={openStudio} variant="ghost" title="Open the local strudel.cc - the full REPL, playing into this track">
 					REPL

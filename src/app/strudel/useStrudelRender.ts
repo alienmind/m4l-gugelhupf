@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { registerSynthSounds, samples, setGainCurve, initAudio, getAudioContext } from "superdough";
-import { copyMessage, copyPath, onDeviceFolder, saveToFile } from "@m4l-jweb/bridge";
+import { AudioClipError, copyMessage, copyPath, createAudioClip, onDeviceFolder, saveToFile } from "@m4l-jweb/bridge";
+import { useParam } from "@m4l-jweb/surface/react";
 
 import { bootScope, compile } from "../../max/shared/engine.mjs";
 import { renderPeriod } from "../../lib/render/determinism";
@@ -42,6 +43,36 @@ const MAX_EXPORT_CYCLES = 32;
  *  stable - an inline `{}` would be a new object every render. */
 const EMPTY_CTX = {} as const;
 
+/**
+ * Live's warp mode 0 - Beats.
+ *
+ * The bounce was rendered at Live's own tempo over a whole number of cycles, so warping
+ * is an identity transform and the mode only decides what happens when the SET's tempo
+ * later moves. Beats is right for that: this is loop material with a known grid, which is
+ * exactly what Beats assumes and Complex does not.
+ */
+const WARP_BEATS = 0;
+
+/** What a landed bounce needs to become a clip - the file, plus what the render knows. */
+interface AudioClipSpec {
+	file: string;
+	name: string;
+	/** The loop end in beats: whole cycles times beats-per-cycle, never guessed. */
+	loopEnd: number;
+}
+
+/**
+ * What a bounced clip is called.
+ *
+ * Not the pattern, which was tried first and is wrong twice over: a Session slot draws a
+ * name in about 90 px, so a line of Strudel is a truncated fragment of syntax, and the
+ * text is the one thing the user can already read in the device above it. Not the
+ * filename either - `gugelhupf-export-1785343077706` names the millisecond it was
+ * rendered. A short constant leaves the slot renameable, which is what a musician does
+ * with a clip anyway.
+ */
+const CLIP_NAME = "Gugelhupf tune";
+
 export function useStrudelRender(
 	/**
 	 * Whether this page names the S1..S8 dials, or leaves them to the Studio. False
@@ -59,6 +90,17 @@ export function useStrudelRender(
 	const [folder, setFolder] = useState<string | null>(null);
 	/** The last file this device wrote, so the copy button can offer its full path. */
 	const [exported, setExported] = useState<string | null>(null);
+	/**
+	 * The bounce landed on disk but not in a clip, because this device is on a MIDI
+	 * track. Offering a NEW audio track is the one target that cannot fail there - and it
+	 * is offered rather than done, because a device that spawns tracks unasked surprises
+	 * people.
+	 */
+	const [offerNewTrack, setOfferNewTrack] = useState<AudioClipSpec | null>(null);
+	// Bouncing into our own track means the clip is now the sound; playing the pattern
+	// underneath it as well is the doubling this switches off. It is a real Live
+	// parameter, so it persists with the set and can be mapped - see surface.ts.
+	const [follow, setFollow] = useParam(surface, "follow");
 
 	// The sounds the BOUNCE needs. Nothing here plays: superdough is loaded in this page
 	// only so an offline render can resolve `s("bd")` and the synth waveforms, and the
@@ -95,6 +137,10 @@ export function useStrudelRender(
 		// Never sounds. The Studio is the engine; this mount is for the tempo, the
 		// beats-per-cycle tracking and the parse that the bounce needs.
 		transport: false,
+		// ...but it is still this mount that writes the Play parameter when Live's
+		// transport moves, and Play is what the Studio follows. So the follow gate
+		// belongs here even though nothing here makes a sound.
+		follow,
 		initialText: INITIAL_TEXT,
 		ctx: EMPTY_CTX,
 		liveScale: "C4:major",
@@ -118,6 +164,60 @@ export function useStrudelRender(
 		const path = exported ? `${folder}/${exported}` : folder;
 		setExportNote(copyMessage(await copyPath(path), path));
 	}, [folder, exported]);
+
+	/**
+	 * The bounce into a clip slot, and the reason it is one call and not a UI.
+	 *
+	 * `target: "selected"` is Live's highlighted clip slot, which - in a device's own view
+	 * - is always a slot on the device's OWN track: a device's UI is on screen only while
+	 * its track is selected, so there is no reachable moment at which the highlighted slot
+	 * belongs to somebody else. That makes the audio-effect flavour of this device the one
+	 * that can bounce (its own track takes audio clips) and the instrument flavour the one
+	 * that cannot, and it is why `not_audio_track` is answered with an OFFER rather than a
+	 * silent hop to another track.
+	 */
+	const placeClip = useCallback(
+		async (spec: AudioClipSpec, where: "selected" | "new") => {
+			try {
+				await createAudioClip(spec.file, where === "new" ? { target: "new" } : { target: "selected" }, {
+					name: spec.name,
+					warp: true,
+					warpMode: WARP_BEATS,
+					loopEnd: spec.loopEnd,
+				});
+				setOfferNewTrack(null);
+				// The clip IS the sound now. Leaving the follow on means the next Play sounds
+				// both, a few milliseconds apart - which is what this device did before the
+				// parameter existed.
+				setFollow(false);
+				setExportNote(
+					`Clip created - ${spec.loopEnd} beat${spec.loopEnd === 1 ? "" : "s"}, warped. Transport follow off, so the clip plays and not the pattern`,
+				);
+				return true;
+			} catch (e) {
+				const reason = e instanceof AudioClipError ? e.reason : "failed";
+				// Only ONE of the failures has a way out, and it is the common one: this
+				// device is an instrument on a MIDI track.
+				setOfferNewTrack(reason === "not_audio_track" ? spec : null);
+				setExportNote(
+					reason === "not_audio_track"
+						? `Exported ${spec.file} - a MIDI track takes no audio clip. Bounce it to a new audio track, or copy the path`
+						: reason === "needs_live_1205"
+							? `Exported ${spec.file} - clips need Live 12.0.5 or newer; copy the path and drag it in`
+							: `Exported ${spec.file} - could not make a clip: ${e instanceof Error ? e.message : String(e)}`,
+				);
+				return false;
+			}
+		},
+		[setFollow],
+	);
+
+	/** The offered escape, taken: a fresh audio track, and the bounce in its first slot. */
+	const bounceToNewTrack = useCallback(async () => {
+		if (!offerNewTrack) return;
+		setExportNote("Creating an audio track...");
+		await placeClip(offerNewTrack, "new");
+	}, [offerNewTrack, placeClip]);
 
 	// Every slider() in the pattern, on a native S1..S8 dial.
 	const sliders = useSliderKnobs(surface, engine.sliderSpecs, engine.text, engine.setSliderValues, describeKnobs);
@@ -163,13 +263,21 @@ export function useStrudelRender(
 			// wait turns a silent hang into a message that says where to look.
 			await withDeadline(saveToFile(name, wav), 30_000, `Saving ${name}`);
 			setExported(name);
-			setExportNote(`Exported ${name} (${seconds.toFixed(1)}s) - copy the path and drag it in`);
+			setExportNote(`Exported ${name} (${seconds.toFixed(1)}s) - making a clip...`);
+			// STRAIGHT INTO A CLIP. This is the whole point of the feature: the file on
+			// disk, the drag through Explorer and the copied path were five manual steps
+			// between a render and a clip, and the clip is what was wanted every time. The
+			// loop length is `cycles * beatsPerCycle` - EXACT, because this page chose the
+			// cycle count and the cps it rendered at, where Live would infer a grid from
+			// transients. The copy-path button stays for the targets that cannot take a
+			// clip and for Live 12.0.4 and older.
+			await placeClip({ file: name, name: CLIP_NAME, loopEnd: cycles * engine.beatsPerCycle }, "selected");
 		} catch (e) {
 			setExportNote("Export failed: " + (e instanceof Error ? e.message : String(e)));
 		} finally {
 			setExporting(false);
 		}
-	}, [exporting, engine.tempo, engine.beatsPerCycle, engine.text, engine.noteCtx]);
+	}, [exporting, engine.tempo, engine.beatsPerCycle, engine.text, engine.noteCtx, placeClip]);
 
 	// The shape App.tsx reads: the engine's own fields, plus the few the device adds.
 	return {
@@ -185,5 +293,8 @@ export function useStrudelRender(
 		exportNote,
 		folder,
 		copyFolder,
+		/** Non-null when the last bounce could not become a clip here, and a new track would. */
+		offerNewTrack: Boolean(offerNewTrack),
+		bounceToNewTrack,
 	};
 }
