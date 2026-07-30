@@ -39,6 +39,20 @@ export default defineSurface({
 		 * macro-mappable Play/Stop lives.
 		 */
 		transport: button({ default: false, label: "Back", short: "Back" }),
+		/**
+		 * FOLLOW LIVE'S TRANSPORT - and the reason it is a parameter rather than a
+		 * preference.
+		 *
+		 * A bounce into this device's own track creates the thing the device is already
+		 * playing: press Play and the clip and the live pattern sound together, a few
+		 * milliseconds apart. Which of the two should be heard is a per-track decision the
+		 * user makes repeatedly, so it belongs where the rest of them are - automatable,
+		 * macro-mappable, and saved with the set. Bouncing turns it OFF, on the reading
+		 * that a clip is a decision to stop rendering it live; the toggle puts it back.
+		 *
+		 * Default ON: an instance that never bounces should behave exactly as before.
+		 */
+		follow: button({ default: true, label: "Follow", short: "Follow" }),
 		...knobPool(KNOB_POOL),
 	},
 
@@ -48,11 +62,11 @@ export default defineSurface({
 	 */
 	layout: {
 		native: {
-			params: ["play", "s1", "s2", "s3", "s4", "s5", "s6", "s7", "s8"],
-			// Play alone on the first row, then all eight dials in ONE row - the same
-			// left-to-right order as the faders in the device view, so a hand moving
-			// between the two surfaces does not have to re-learn the layout.
-			rows: [1, 8],
+			params: ["play", "follow", "s1", "s2", "s3", "s4", "s5", "s6", "s7", "s8"],
+			// The two transport controls on the first row, then all eight dials in ONE row -
+			// the same left-to-right order as the faders in the device view, so a hand
+			// moving between the two surfaces does not have to re-learn the layout.
+			rows: [2, 8],
 			panel: true,
 			switch: "transport",
 		},

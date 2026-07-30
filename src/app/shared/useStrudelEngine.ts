@@ -122,6 +122,16 @@ export interface EngineOptions {
 	 */
 	transport?: boolean;
 	/**
+	 * Whether LIVE'S transport is allowed to write the Play parameter. Default true.
+	 *
+	 * Separate from `transport` above, which decides whether this mount sounds at all.
+	 * This one is about who may START it: a device that has bounced its pattern into a
+	 * clip on its own track would otherwise play the clip and the pattern together on
+	 * the next Play. The device's own Run button is unaffected - a deliberate press is
+	 * not the transport following.
+	 */
+	follow?: boolean;
+	/**
 	 * What this device adds to the NoteContext: `scale`, or `drumMap`. MUST be
 	 * memoized by the caller - it keys the recompile below, so a fresh object every
 	 * render would re-evaluate the pattern on every render.
@@ -236,6 +246,10 @@ export function useStrudelEngine(opts: EngineOptions): EngineState {
 	const sink = opts.voiceSink ? "voice" : opts.superdoughSink ? "superdough" : "note";
 	/** Does Live's transport drive THIS engine? See the option's own note. */
 	const transport = opts.transport ?? true;
+	// A ref, because `transport_play` is bound ONCE at mount: the handler must read the
+	// CURRENT answer, not the one that was true when the page loaded.
+	const followRef = useRef(opts.follow ?? true);
+	followRef.current = opts.follow ?? true;
 	const voiceSinkRef = useRef(opts.voiceSink);
 	voiceSinkRef.current = opts.voiceSink;
 	const superdoughSinkRef = useRef(opts.superdoughSink);
@@ -360,8 +374,16 @@ export function useStrudelEngine(opts: EngineOptions): EngineState {
 		 * so there is still exactly one source of truth for "is this device playing": the
 		 * automatable parameter. Clicking Play in the device, an automation lane and a
 		 * launched clip all move the same control, and the last one to move it wins.
+		 *
+		 * A device that has bounced its pattern into a clip on its own track opts OUT
+		 * (`follow: false`), or Play would sound the clip and the live pattern at once.
+		 * The gate is on the FOLLOW only: Run still works, and so does automation written
+		 * against the Play parameter, because both of those are somebody deciding.
 		 */
-		bindInlet(IN.transport_play, (on) => setPlayParam(Number(on) === 1));
+		bindInlet(IN.transport_play, (on) => {
+			if (!followRef.current) return;
+			setPlayParam(Number(on) === 1);
+		});
 		// Tempo must be bound BEFORE ui_ready goes out - the wrapper replies
 		// with the current tempo immediately, and the worker effect below runs
 		// after this one. The ref carries the value across that gap.
