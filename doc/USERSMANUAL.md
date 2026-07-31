@@ -34,6 +34,34 @@ as a reference afterwards.
    does it for you; on macOS, `install-mac.sh`.
 3. In Live, find the devices under **User Library > Max For Live > m4l-gugelhupf**.
 
+**On macOS, run the installer as `bash install-mac.sh`** - from Terminal, in the folder
+you unzipped:
+
+```bash
+cd ~/Downloads/m4l-gugelhupf-1.3.2-beta   # the ZIP carries its version
+bash install-mac.sh
+```
+
+Two things there are macOS's, and the script handles both:
+
+- **`bash`, not `./`.** Archive Utility does not reliably keep the executable bit the ZIP
+  records, so `./install-mac.sh` can answer `permission denied`.
+- **Quarantine.** Everything unpacked from a downloaded ZIP is marked
+  `com.apple.quarantine` - the `.amxd` files and every file inside a `-site` folder. The
+  script clears it on what it installed. **If you copy the folder by hand instead, clear
+  it yourself**, or the devices may load with an empty page:
+
+  ```bash
+  xattr -dr com.apple.quarantine "$HOME/Music/Ableton/User Library/Max For Live/m4l-gugelhupf"
+  ```
+
+The script prints the User Library it chose and lists what it installed. If it chose
+wrong, name the folder yourself:
+
+```bash
+bash install-mac.sh m4l-gugelhupf ./m4l-gugelhupf "/Users/you/Music/Ableton/User Library"
+```
+
 **Keep the `-site` folders next to the `.amxd` files.** Two devices open a full local copy
 of strudel.cc in a window, and that copy is a folder rather than something hidden inside
 the device. A device whose folder is missing still plays, but its Studio window opens
@@ -416,6 +444,8 @@ on each track that hosts a device.
 | `s("bd sd")` is silent on a MIDI device | It names samples, and MIDI devices have no sample engine. Write `note(...)`, or use the Drums Sampler |
 | No sound from `s("bd")` offline | Samples are fetched when first played. Anything played once online is cached and works offline afterwards; synths never need the network |
 | The Studio window opens empty | Its `-site` folder is not next to the `.amxd`. Reinstall the whole folder |
+| macOS: a device loads but its page stays blank | Most likely quarantine on the unzipped files. Run the `xattr -dr` line in section 1 on the installed folder, then delete and re-drag the device |
+| macOS: `permission denied` running the installer | Run it as `bash install-mac.sh` |
 | A frozen track went silent | Freeze cannot render a browser engine. Use Export, or resample |
 | The Synth is silent | It only plays incoming MIDI. Check something is sending notes to the track |
 | Export says a MIDI track takes no audio clip | Correct - use Gugelhupf Audio on an audio track, or press the offered new-track button |
@@ -423,6 +453,20 @@ on each track that hosts a device.
 
 **The Max console is where a device speaks.** In Live: **View > Max Console** (or the Max
 window on macOS). Every device logs what it loaded, what it saved and where.
+
+Every load opens with a diagnostics block - the device's own path, the folder it derived,
+the URL it handed its page, and a listing of what it actually found beside itself:
+
+```
+m4l-jweb: --- diagnostics (build 1.3.1, mode instrument) ---
+m4l-jweb: patcher.filepath = '...'
+m4l-jweb: device folder = '...'
+m4l-jweb: ui url = file:///...
+m4l-jweb: folder listing (12): alienmind-gugelhupf.amxd, ...
+```
+
+**Paste that block into any bug report.** It is the difference between a guess and a
+diagnosis, and on macOS it is currently the only evidence there is.
 
 ---
 
