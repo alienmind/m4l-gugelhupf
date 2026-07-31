@@ -1,7 +1,7 @@
 {
 	"name": "m4l-gugelhupf",
 	"private": true,
-	"version": "1.3.2-beta",
+	"version": "1.3.2-beta2",
 	"type": "module",
 	"packageManager": "pnpm@10.0.0",
 	"license": "AGPL-3.0-or-later",
