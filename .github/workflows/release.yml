@@ -59,4 +59,4 @@ jobs:
           generate_release_notes: true
           files: |
             dist/m4l-gugelhupf/*.amxd
-            dist/m4l-gugelhupf.zip
+            dist/m4l-gugelhupf-*.zip
