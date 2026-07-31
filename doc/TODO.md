@@ -35,6 +35,36 @@ as `copyPath()` in `@m4l-jweb/bridge`.
 
 ## Open Tasks
 
+### 0. BUG - macOS: it runs, and the DEVICE VIEW does not fit
+
+A beta tester's Mac has run `alienmind-gugelhupf` on 1.3.2-beta and sent the console. It
+loads, the page loads, the pattern comes back out of the set, the Studio window opens the
+local strudel.cc, and **pressing play there makes sound that reaches the Ableton track** -
+so `[jweb~]` audio works on macOS. Everything the console settled is upstream in
+m4l-jweb's MAX-FACTS ("macOS, from the first Mac ever to run this").
+
+What is still wrong, in the tester's words: the device view is "better but still not fully
+adjusted", and from the Studio window a clip cannot be rendered and MIDI cannot be saved,
+and the device view's own transport buttons do not start or stop the Studio.
+
+Three of those are one known upstream gap and one wrong track:
+
+- **A window page cannot write a file** (m4l-jweb TODO item 1). Render-a-clip and
+  save-MIDI from the Studio are both writes made from a window, so they go nowhere and say
+  nothing. Not macOS.
+- **That instance is on a MIDI track** (`this device is on a midi track` in the log). Live
+  puts an audio clip on an audio track only - `alienmind-gugelhupf-audio` on an audio
+  track is the flavour that bounces. Documented, and worth checking before anything is
+  called broken.
+- **The transport buttons not reaching the Studio is NOT explained**, and the layout may
+  be the whole of it: a control drawn outside the 169 px view, or under the layered panel,
+  cannot be hit. Get the geometry before theorising - `page box` and `native layout` in
+  the diagnostics, plus a screenshot of the same instance.
+
+**What is owed by THIS repo:** the numbered checklist for that pair of readings, and then
+whatever the layout constants turn out to need. Nothing about the layout gets changed
+before the rects and the screenshot are side by side.
+
 ### 1. FEAT - a selectable TAIL on the bounce, so a reverb is not cut off
 
 **The click is real and it is the loop point, not the renderer.** `renderCycles` renders

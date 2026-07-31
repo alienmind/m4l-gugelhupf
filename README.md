@@ -22,7 +22,21 @@ You can download the pre-built `.amxd` devices ready for Ableton Live from:
 
 ## Install
 
-Once downloaded, simply extract the ZIP file and copy the `.amxd` devices into your Ableton **User Library** (e.g. `User Library/Max For Live/m4l-gugelhupf/`).
+Once downloaded, simply extract the ZIP file and copy the `.amxd` devices into your Ableton **User Library** (e.g. `User Library/Max For Live/m4l-gugelhupf/`). Keep each `-site` folder next to the devices - that is the local copy of strudel.cc the Studio window opens.
+
+The ZIP carries an installer that does it for you: `install-windows.ps1`, or on macOS
+
+```bash
+bash install-mac.sh      # `bash`, not `./` - Archive Utility drops the executable bit
+```
+
+**macOS, if you copy the folder by hand:** everything from a downloaded ZIP is quarantined, and a quarantined page is one a device can load without ever showing. Clear it, or use the installer, which does:
+
+```bash
+xattr -dr com.apple.quarantine "$HOME/Music/Ableton/User Library/Max For Live/m4l-gugelhupf"
+```
+
+macOS is **not verified**: this project is developed and tested on Windows 11 only. Every device prints a diagnostics block (its path, its page URL, what it found on disk) into Live's Max window at load - paste it into an issue and it becomes fixable. See [doc/USERSMANUAL.md](doc/USERSMANUAL.md#10-when-something-is-wrong).
 
 > ⚠️ **Highly Experimental Limitation:** This is not ready for real music production, just a fun experiment. Sound can be choppy and timing is unreliable. The main instrument (**Gugelhupf**) plays the real superdough engine live in the device, so edits and knob turns are audible immediately - but performance is still not ideal and can go out of sync with the track.
 
@@ -145,7 +159,7 @@ pnpm install
 git submodule update --init   # strudel/ - the engine is bundled from here
 pnpm test          # vitest: mini-notation parser + headless engine tests
 pnpm build         # → dist/m4l-gugelhupf/alienmind-gugelhupf.amxd + the seven -<name>.amxd
-                    #   + dist/m4l-gugelhupf.zip (release archive incl. installers)
+                    #   + dist/m4l-gugelhupf-<version>.zip (release archive incl. installers)
 pnpm dev:midi       # browser dev for the MIDI device, mocked Live beside it
 pnpm dev:drums-midi # browser dev for the Drums MIDI device
 pnpm dev:sample-browser # browser dev for the sample browser
