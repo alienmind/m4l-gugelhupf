@@ -43,5 +43,5 @@ jobs:
           name: devices
           path: |
             dist/m4l-gugelhupf/*.amxd
-            dist/m4l-gugelhupf.zip
+            dist/m4l-gugelhupf-*.zip
           if-no-files-found: error
