@@ -4,7 +4,7 @@
 
 # Gugelhupf - Generative Max 4 Live device (which is not like a Strudel)
 
-## v1.3.2-beta2
+## v1.3.2-beta3
 
 *"A Gugelhupf, like a Strudel, is a traditional Central European cake."*
 
@@ -38,7 +38,7 @@ as a reference afterwards.
 you unzipped:
 
 ```bash
-cd ~/Downloads/m4l-gugelhupf-1.3.2-beta2   # the ZIP carries its version
+cd ~/Downloads/m4l-gugelhupf-1.3.2-beta3   # the ZIP carries its version
 bash install-mac.sh
 ```
 
