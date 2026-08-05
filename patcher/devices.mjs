@@ -131,6 +131,18 @@ export default [
 		mode: "strudel",
 		chains: ["webaudio"],
 		latency: 66,
+		/**
+		 * OFFSCREEN, and only on this one - it is half of an A/B.
+		 *
+		 * One macOS draws the device page at the wrong scale inside a box whose rect is
+		 * exactly the one the build wrote, while another Mac running the same build shows
+		 * nothing wrong. `rendermode 1` (the default) renders straight into the patcher
+		 * with no offscreen buffer, which is where a display's backing scale can go
+		 * missing; `0` renders to a buffer first. This device and `alienmind-gugelhupf`
+		 * are otherwise the same page, so dragging both onto a track compares the two
+		 * modes in one session rather than one rebuild per guess.
+		 */
+		rendermode: 0,
 		unmatchedTo: "js",
 	},
 	{
