@@ -20,6 +20,11 @@ page reports the viewport and pixel ratio it was given, and `alienmind-gugelhupf
 is built with the offscreen `rendermode` while `alienmind-gugelhupf` keeps the default -
 one A/B, in one build, for a fault that appears on one Mac and not on another.
 
+**The installer in the ZIP now works.** It looked for a folder named after the library
+rather than the one it ships beside, so `bash install-mac.sh` answered "No .amxd found -
+run pnpm build" on a perfectly good download. It finds the devices next to itself now,
+with no arguments.
+
 Install with `bash install-mac.sh` - it clears `com.apple.quarantine`, copies the manual,
 and prints the User Library it chose. The manual's troubleshooting section says what to
 paste into a report.
