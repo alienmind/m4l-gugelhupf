@@ -3,7 +3,7 @@
 High-level history of m4l-gugelhupf, grouped by milestone release. Up to 1.0.0 each
 minor version was a milestone of its own. Newest first.
 
-## 1.3.2-beta2 - a build for macOS to report itself with
+## 1.3.2-beta3 - a build for macOS to report itself with
 
 **macOS runs these devices now, and its device view still does not fit.** Every device
 here was written and tested on Windows 11; the library's macOS path fixes are in this
@@ -14,6 +14,11 @@ Every device posts a **diagnostics block** into Live's Max window at load: the p
 resolved, the URL it handed its page, a listing of what is actually beside the `.amxd`,
 and each native object's geometry. beta2 reads that geometry through `getattr`, which is
 what makes the layout question answerable at all.
+
+**beta3: the page speaks too.** Every button press names itself in the Max window, the
+page reports the viewport and pixel ratio it was given, and `alienmind-gugelhupf-audio`
+is built with the offscreen `rendermode` while `alienmind-gugelhupf` keeps the default -
+one A/B, in one build, for a fault that appears on one Mac and not on another.
 
 Install with `bash install-mac.sh` - it clears `com.apple.quarantine`, copies the manual,
 and prints the User Library it chose. The manual's troubleshooting section says what to
