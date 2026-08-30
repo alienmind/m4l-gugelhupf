@@ -326,23 +326,11 @@ function sendFollow(force: boolean): void {
  * logged, so a silent no-op is at least visible in the Max console.
  * ------------------------------------------------------------------ */
 
-/** Max's application object. Not in the packaged wrapper's ambient types. */
-declare const max: { launchbrowser(url: string): void };
-
-function open_url(): void {
-	// A URL arrives whole, but Max splits on spaces - rejoin before using it.
-	var url = Array.prototype.slice.call(arguments, 0).join(" ");
-	if (!url || url.indexOf("http") !== 0) {
-		post("strudel: refusing to open " + url + " - only http(s) URLs\n");
-		return;
-	}
-	try {
-		max.launchbrowser(url);
-		post("strudel: launchbrowser " + url + "\n");
-	} catch (e) {
-		post("strudel: launchbrowser failed for " + url + ": " + (e as Error).message + "\n");
-	}
-}
+// `open_url` USED TO LIVE HERE. It is the packaged wrapper's now (m4l-jweb 1.6.0), which
+// does the same job with a stricter check - http and https only, rather than anything
+// starting "http" - and reaches Max through `messnamed` instead of the `max` global. Two
+// definitions of one function in the concatenated [js] source is a duplicate-implementation
+// error, not a silent override, so this one had to go rather than sit there unused.
 
 /* ------------------------------------------------------------------ *
  * Hooks called by the packaged wrapper

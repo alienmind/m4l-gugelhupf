@@ -3,6 +3,21 @@
 High-level history of m4l-gugelhupf, grouped by milestone release. Up to 1.0.0 each
 minor version was a milestone of its own. Newest first.
 
+## 1.4.0 - maintenance
+
+Built against `m4l-jweb` 1.6.0 from npm. Nothing here changes what a device does.
+
+The three `@m4l-jweb/*` dependencies were `link:../m4l-jweb/packages/*` - a path on one
+machine - and are now `^1.6.0` from the registry, so this repo builds anywhere without a
+checkout of the library beside it.
+
+One thing had to move for it to compile. `open_url` is in the packaged wrapper as of
+1.6.0, and this repo had its own, so the concatenated `[js]` source had two
+implementations of one function - which is a TypeScript error, not a silent override. The
+local one is deleted; the library's does the same job with a stricter check (http and
+https, rather than anything starting "http") and reaches Max through `messnamed` instead
+of the `max` global.
+
 ## 1.3.2-beta3 - a build for macOS to report itself with
 
 **macOS runs these devices now, and its device view still does not fit.** Every device
