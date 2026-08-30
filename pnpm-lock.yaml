@@ -34,14 +34,14 @@ importers:
         specifier: ^0.4.1
         version: 0.4.1
       '@m4l-jweb/bridge':
-        specifier: ^1.6.0
-        version: 1.6.0
+        specifier: ^1.6.1
+        version: 1.6.1
       '@m4l-jweb/build':
-        specifier: ^1.6.0
-        version: 1.6.0
+        specifier: ^1.6.1
+        version: 1.6.1
       '@m4l-jweb/surface':
-        specifier: ^1.6.0
-        version: 1.6.0(@m4l-jweb/bridge@1.6.0)(react@19.2.7)
+        specifier: ^1.6.1
+        version: 1.6.1(@m4l-jweb/bridge@1.6.1)(react@19.2.7)
       '@tailwindcss/vite':
         specifier: ^4.0.0
         version: 4.3.2(vite@6.4.3(@types/node@22.20.1)(jiti@2.7.0)(lightningcss@1.32.0))
@@ -671,24 +671,24 @@ packages:
   '@kabelsalat/web@0.4.1':
     resolution: {integrity: sha512-ASkFhePJLx3GjadYOueI7sHKXBbRPk/a1pfslFeQNI9gU7yZq/KrnkmOmLrgrtixAsy7gyi1vWqkmRRvH3Ki6w==}
 
-  '@m4l-jweb/bridge@1.6.0':
-    resolution: {integrity: sha512-R42R0r2zcaOYb2BlRoYQ+F8ry1xl+EvVq8w1EjOIL6UH2yhC8M3yLXTjD0jLCNlikAhZ1sVDI18U+fYlx+0kdg==}
+  '@m4l-jweb/bridge@1.6.1':
+    resolution: {integrity: sha512-n7qV3C7iGauNzA5gD2KtkwLoXHaQBF6X+ylrt0+CiYaj4gGszUEXhKK65OswF7NYgtcIWGWSRMVnkBBOpU6TAg==}
 
-  '@m4l-jweb/build@1.6.0':
-    resolution: {integrity: sha512-245qxYdPlQDYh5NIWtgnFtNdRRrzNXie+DMswBoK5i/Zu4PdUGFEUQ+v+ksZ/wudq/bNP87Hzj3gBB4KwJieaA==}
+  '@m4l-jweb/build@1.6.1':
+    resolution: {integrity: sha512-ibsoBA1Bbg7BpNiUzYJ7LmhWtRAqtXVcC80y0VVCu/hKvFOUdsSrVw0Vrq0m0c/rV4MnI+4Jy/VNfwn15Jx35g==}
     hasBin: true
 
-  '@m4l-jweb/surface@1.6.0':
-    resolution: {integrity: sha512-z0Kv+ttvZUtfjO764KgQ2wbKWJ8zC+SDqkkZwbg8wcsiAU3CSW0oQcPGEeBy9MzQCSTj88AVi0DO5KHJAfWHVg==}
+  '@m4l-jweb/surface@1.6.1':
+    resolution: {integrity: sha512-wc6VpQe588Ky32w7M2W6IaoJZFqITNomyRuE6By9Xc6PgFo+3bVMeVFnTdkzPcr5wPzmkozPYtpxeqwYTJb+hA==}
     peerDependencies:
-      '@m4l-jweb/bridge': 1.6.0
+      '@m4l-jweb/bridge': 1.6.1
       react: '>=18'
     peerDependenciesMeta:
       react:
         optional: true
 
-  '@m4l-jweb/wrapper@1.6.0':
-    resolution: {integrity: sha512-vLO0KW7LVD3kbbGMIdUTaqyc1vZG9pmIIwkNPmkBLtKxtf648O8whiIcMBMejOq6mmL8HroQ8GBYGGKTQVF0aA==}
+  '@m4l-jweb/wrapper@1.6.1':
+    resolution: {integrity: sha512-1GWzcXMKVFDKwECJKmx2I4WBbAKu8YlzZJyEgYICyGx7CKel5KmWAIjQCcW/JROFJb9Gm7Ej0F2a20GaIz2kXg==}
 
   '@pkgjs/parseargs@0.11.0':
     resolution: {integrity: sha512-+1VkjdD0QBLPodGrJUeqarH8VAIvQODIbwh9XpP5Syisf7YoQgsJKPNFoqqLQlu+VQ/tVSshMR6loPMn8U+dPg==}
@@ -2490,11 +2490,11 @@ snapshots:
       '@kabelsalat/core': 0.4.0
       '@kabelsalat/lib': 0.4.1
 
-  '@m4l-jweb/bridge@1.6.0': {}
+  '@m4l-jweb/bridge@1.6.1': {}
 
-  '@m4l-jweb/build@1.6.0':
+  '@m4l-jweb/build@1.6.1':
     dependencies:
-      '@m4l-jweb/wrapper': 1.6.0
+      '@m4l-jweb/wrapper': 1.6.1
       acorn: 8.17.0
       archiver: 7.0.1
       esbuild: 0.25.12
@@ -2504,13 +2504,13 @@ snapshots:
       - bare-buffer
       - react-native-b4a
 
-  '@m4l-jweb/surface@1.6.0(@m4l-jweb/bridge@1.6.0)(react@19.2.7)':
+  '@m4l-jweb/surface@1.6.1(@m4l-jweb/bridge@1.6.1)(react@19.2.7)':
     dependencies:
-      '@m4l-jweb/bridge': 1.6.0
+      '@m4l-jweb/bridge': 1.6.1
     optionalDependencies:
       react: 19.2.7
 
-  '@m4l-jweb/wrapper@1.6.0': {}
+  '@m4l-jweb/wrapper@1.6.1': {}
 
   '@pkgjs/parseargs@0.11.0':
     optional: true

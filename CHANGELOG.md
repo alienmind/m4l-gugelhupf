@@ -5,10 +5,10 @@ minor version was a milestone of its own. Newest first.
 
 ## 1.4.0 - maintenance
 
-Built against `m4l-jweb` 1.6.0 from npm. Nothing here changes what a device does.
+Built against `m4l-jweb` 1.6.1 from npm. Nothing here changes what a device does.
 
 The three `@m4l-jweb/*` dependencies were `link:../m4l-jweb/packages/*` - a path on one
-machine - and are now `^1.6.0` from the registry, so this repo builds anywhere without a
+machine - and are now `^1.6.1` from the registry, so this repo builds anywhere without a
 checkout of the library beside it.
 
 One thing had to move for it to compile. `open_url` is in the packaged wrapper as of
